@@ -190,11 +190,11 @@ int main(void)
 
     // setup PA15 as output
     out.port = PA; out.pin  = 15;
-    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
+    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&out, 8, 0);
 
     // setup PL10 as output
     out.port = PL; out.pin  = 10;
-    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
+    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&out, 8, 0);
 
 
 
@@ -214,11 +214,11 @@ int main(void)
         {
             // set PA15 state = 1
             out.port = PA; out.pin  = 15;
-            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&buf, 8, 0);
+            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&out, 8, 0);
 
             // set PL10 state = 0
             out.port = PL; out.pin  = 10;
-            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&buf, 8, 0);
+            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&out, 8, 0);
 
             t = 0;
             printf("%d: PA15 = 1, PL10 = 0 \n", n);
@@ -227,11 +227,11 @@ int main(void)
         {
             // set PA15 state = 0
             out.port = PA; out.pin  = 15;
-            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&buf, 8, 0);
+            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&out, 8, 0);
 
             // set PL10 state = 1
             out.port = PL; out.pin  = 10;
-            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&buf, 8, 0);
+            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&out, 8, 0);
 
             t = 1;
             printf("%d: PA15 = 0, PL10 = 1 \n", n);
