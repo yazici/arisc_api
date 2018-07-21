@@ -182,19 +182,19 @@ int main(void)
     // setup output message buffer view
     struct gpio_msg_port_pin_t out = *((struct gpio_msg_port_pin_t *) &buf);
 
-    // setup pins
-    {
-        // cleanup buffer
-        memset(&buf, 0, MSG_LEN);
 
-        // setup PA15 as output
-        out.port = PA; out.pin  = 15;
-        msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
 
-        // setup PL10 as output
-        out.port = PL; out.pin  = 10;
-        msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
-    }
+
+    // cleanup buffer
+    memset(&buf, 0, MSG_LEN);
+
+    // setup PA15 as output
+    out.port = PA; out.pin  = 15;
+    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
+
+    // setup PL10 as output
+    out.port = PL; out.pin  = 10;
+    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
 
 
 
