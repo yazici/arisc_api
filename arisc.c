@@ -79,7 +79,7 @@ int8_t msg_read(uint8_t type, uint8_t * msg, uint8_t bswap)
  * @param   type    user defined message type (0..0xFF)
  * @param   msg     pointer to the message buffer
  * @param   length  the length of a message ( 0 .. (MSG_MAX_LEN-4) )
- * @param   bswap   0 - if you sending an array of 32bit numbers, 1 - for the text
+ * @param   bswap   0 - if you sending a structure of 32bit numbers, 1 - for the others
  *
  * @retval   0 (message sent)
  * @retval  -1 (message not sent)
@@ -179,15 +179,21 @@ int main(void)
     // setup vars
     uint8_t t = 0, n = 0;
 
+    // setup output message buffer view
+    struct gpio_msg_port_pin_t out = *((struct gpio_msg_port_pin_t *) &buf);
+
     // setup pins
     {
         // cleanup buffer
         memset(&buf, 0, MSG_LEN);
 
-        GPIO_MSG_BUF_OUTPUT_MASK(&buf,PA) |= (1U << 15);
-        GPIO_MSG_BUF_OUTPUT_MASK(&buf,PL) |= (1U << 10);
+        // setup PA15 as output
+        out.port = PA; out.pin  = 15;
+        msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
 
-        msg_send(GPIO_MSG_SETUP, (uint8_t*)&buf, GPIO_MSG_SETUP_LEN, 0);
+        // setup PL10 as output
+        out.port = PL; out.pin  = 10;
+        msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&buf, 8, 0);
     }
 
 
@@ -206,21 +212,30 @@ int main(void)
         // toogle pins PA15 and PL10
         if ( t )
         {
-            GPIO_MSG_BUF_SET_MASK(&buf,PA)   |= (1U << 15);
-            GPIO_MSG_BUF_CLEAR_MASK(&buf,PL) |= (1U << 10);
+            // set PA15 state = 1
+            out.port = PA; out.pin  = 15;
+            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&buf, 8, 0);
+
+            // set PL10 state = 0
+            out.port = PL; out.pin  = 10;
+            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&buf, 8, 0);
+
             t = 0;
             printf("%d: PA15 = 1, PL10 = 0 \n", n);
         }
         else
         {
-            GPIO_MSG_BUF_CLEAR_MASK(&buf,PA) |= (1U << 15);
-            GPIO_MSG_BUF_SET_MASK(&buf,PL)   |= (1U << 10);
+            // set PA15 state = 0
+            out.port = PA; out.pin  = 15;
+            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&buf, 8, 0);
+
+            // set PL10 state = 1
+            out.port = PL; out.pin  = 10;
+            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&buf, 8, 0);
+
             t = 1;
             printf("%d: PA15 = 0, PL10 = 1 \n", n);
         }
-
-        // send a message
-        msg_send(GPIO_MSG_SET, (uint8_t*)&buf, GPIO_MSG_SET_LEN, 0);
     }
 
 
