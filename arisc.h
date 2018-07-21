@@ -98,28 +98,15 @@ enum
     PULSGEN_MSG_TASK_TOGGLES
 };
 
-#define PULSGEN_MSG_BUF_LEN             MSG_LEN
-#define PULSGEN_MSG_CH_CNT              12
-#define PULSGEN_MSG_PIN_SETUP_LEN       (4*4*PULSGEN_MSG_CH_CNT)
-#define PULSGEN_MSG_TASK_SETUP_LEN      (5*4*PULSGEN_MSG_CH_CNT)
-#define PULSGEN_MSG_TASK_ABORT_LEN      (4)
-#define PULSGEN_MSG_TASK_STATE_LEN      (4)
-#define PULSGEN_MSG_TASK_TOGGLES_LEN    (4*PULSGEN_MSG_CH_CNT)
+/// the message data sizes
+#define PULSGEN_MSG_BUF_LEN MSG_LEN
 
 /// the message data access
-#define PULSGEN_MSG_BUF_CHANNEL_ID(LINK,SLOT)       (*((uint32_t*)(LINK) + SLOT))
-#define PULSGEN_MSG_BUF_PORT(LINK,SLOT)             (*((uint32_t*)(LINK) + SLOT + 1*PULSGEN_MSG_CH_CNT))
-#define PULSGEN_MSG_BUF_PIN(LINK,SLOT)              (*((uint32_t*)(LINK) + SLOT + 2*PULSGEN_MSG_CH_CNT))
-#define PULSGEN_MSG_BUF_INVERTED(LINK,SLOT)         (*((uint32_t*)(LINK) + SLOT + 3*PULSGEN_MSG_CH_CNT))
-
-#define PULSGEN_MSG_BUF_PERIOD(LINK,SLOT)           (*((uint32_t*)(LINK) + SLOT + 1*PULSGEN_MSG_CH_CNT))
-#define PULSGEN_MSG_BUF_DELAY(LINK,SLOT)            (*((uint32_t*)(LINK) + SLOT + 2*PULSGEN_MSG_CH_CNT))
-#define PULSGEN_MSG_BUF_TOGGLES(LINK,SLOT)          (*((uint32_t*)(LINK) + SLOT + 3*PULSGEN_MSG_CH_CNT))
-#define PULSGEN_MSG_BUF_DUTY(LINK,SLOT)             (*((uint32_t*)(LINK) + SLOT + 4*PULSGEN_MSG_CH_CNT))
-
-#define PULSGEN_MSG_BUF_CHANNELS_MASK(LINK)         (*((uint32_t*)(LINK)))
-
-#define PULSGEN_MSG_BUF_TOGGLES_MADE(LINK,SLOT)     (*((uint32_t*)(LINK) + SLOT))
+struct pulsgen_msg_pin_setup_t { uint32_t ch; uint32_t port; uint32_t pin; uint32_t inverted; };
+struct pulsgen_msg_task_setup_t { uint32_t ch; uint32_t period; uint32_t toggles; uint32_t duty; uint32_t delay; };
+struct pulsgen_msg_ch_t { uint32_t ch; };
+struct pulsgen_msg_state_t { uint32_t state; };
+struct pulsgen_msg_toggles_t { uint32_t toggles; };
 
 
 
@@ -147,33 +134,25 @@ enum { PH_A, PH_B, PH_Z };
 /// messages types
 enum
 {
-    ENCODER_MSG_PINS_SETUP = 0x30,
+    ENCODER_MSG_PIN_SETUP = 0x30,
     ENCODER_MSG_SETUP,
-    ENCODER_MSG_COUNTS,
-    ENCODER_MSG_ENABLE,
-    ENCODER_MSG_RESET
+    ENCODER_MSG_STATE_SET,
+    ENCODER_MSG_STATE_GET,
+    ENCODER_MSG_COUNTS_SET,
+    ENCODER_MSG_COUNTS_GET
 };
 
-#define ENCODER_MSG_BUF_LEN             MSG_LEN
-#define ENCODER_MSG_PINS_SETUP_LEN      (4*6*ENCODER_CH_CNT)
-#define ENCODER_MSG_SETUP_LEN           (4*3*ENCODER_CH_CNT)
-#define ENCODER_MSG_COUNTS_LEN          (4*ENCODER_CH_CNT)
-#define ENCODER_MSG_ENABLE_LEN          (4)
-#define ENCODER_MSG_RESET_LEN           (4)
+/// the message data sizes
+#define ENCODER_MSG_BUF_LEN MSG_LEN
 
 /// the message data access
-#define ENCODER_MSG_BUF_PORT(LINK,CH,PHASE)     (*((uint32_t*)(LINK) + 6*CH + PHASE))
-#define ENCODER_MSG_BUF_PIN(LINK,CH,PHASE)      (*((uint32_t*)(LINK) + 6*CH + PHASE + 3))
-
-#define ENCODER_MSG_BUF_ENABLED(LINK,CH)        (*((uint32_t*)(LINK) + 3*CH))
-#define ENCODER_MSG_BUF_USING_B(LINK,CH)        (*((uint32_t*)(LINK) + 3*CH + 1))
-#define ENCODER_MSG_BUF_USING_Z(LINK,CH)        (*((uint32_t*)(LINK) + 3*CH + 2))
-
-#define ENCODER_MSG_BUF_COUNTS(LINK,CH)         (*((uint32_t*)(LINK) + CH))
-
-#define ENCODER_MSG_BUF_ENABLE(LINK)            (*((uint32_t*)(LINK)))
-
-#define ENCODER_MSG_BUF_RESET(LINK)             (*((uint32_t*)(LINK)))
+struct encoder_msg_ch_t { uint32_t ch; };
+struct encoder_msg_pin_setup_t { uint32_t ch; uint32_t phase; uint32_t port; uint32_t pin; };
+struct encoder_msg_setup_t { uint32_t ch; uint32_t using_B; uint32_t using_Z; };
+struct encoder_msg_state_set_t { uint32_t ch; uint32_t state; };
+struct encoder_msg_counts_set_t { uint32_t ch; int32_t counts; };
+struct encoder_msg_state_get_t { uint32_t state; };
+struct encoder_msg_counts_get_t { int32_t counts; };
 
 
 
