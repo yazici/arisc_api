@@ -14,6 +14,30 @@
 
 
 
+// public method prototypes
+
+void gpio_pin_setup_for_output(uint32_t port, uint32_t pin);
+void gpio_pin_setup_for_input(uint32_t port, uint32_t pin);
+
+uint32_t gpio_pin_get(uint32_t port, uint32_t pin);
+void gpio_pin_set(uint32_t port, uint32_t pin);
+void gpio_pin_clear(uint32_t port, uint32_t pin);
+
+uint32_t gpio_port_get(uint32_t port);
+void gpio_port_set(uint32_t port, uint32_t mask);
+void gpio_port_clear(uint32_t port, uint32_t mask);
+
+int8_t msg_read(uint8_t type, uint8_t * msg, uint8_t bswap);
+int8_t msg_send(uint8_t type, uint8_t * msg, uint8_t length, uint8_t bswap);
+
+void mem_init(void);
+void mem_deinit(void);
+
+
+
+
+// public data
+
 #define PHY_MEM_BLOCK_SIZE      4096
 
 #define SRAM_A2_SIZE            (48*1024)

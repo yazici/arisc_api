@@ -23,22 +23,9 @@
 
 static struct msg_t * msg_arisc[MSG_MAX_CNT] = {0};
 static struct msg_t * msg_arm[MSG_MAX_CNT] = {0};
+static uint8_t msg_buf[MSG_LEN] = {0};
 
 static uint32_t *vrt_block_addr;
-
-
-
-
-// public method prototypes
-
-int8_t msg_read(uint8_t type, uint8_t * msg, uint8_t bswap);
-int8_t msg_send(uint8_t type, uint8_t * msg, uint8_t length, uint8_t bswap);
-void mem_init(void);
-void mem_deinit(void);
-
-
-
-
 
 
 
@@ -47,55 +34,40 @@ void mem_deinit(void);
 
 int main(void)
 {
-    uint8_t buf[MSG_LEN] = {0};
     uint8_t t = 0, n = 0;
-    struct gpio_msg_port_pin_t data = *((struct gpio_msg_port_pin_t *) &buf);
 
     mem_init();
 
     // --- GPIO TEST 1 ---------------------------------------------------------
 
-    // setup PA15 as output
-    data.port = PA; data.pin  = 15;
-    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&data, 8, 0);
-
-    // setup PL10 as output
-    data.port = PL; data.pin  = 10;
-    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&data, 8, 0);
+    // setup pins PA15 and PL10
+    gpio_pin_setup_for_output(PA,15);
+    gpio_pin_setup_for_output(PL,10);
 
     for(;;)
     {
-        n++;
+        // main loop is finite, only 100 pin toggles
+        if ( (++n) > 100 ) break;
 
         // 1sec delay
         usleep(1000000);
 
-        // toogle pins PA15 and PL10
+        // toggle pins
         if ( t )
         {
-            // set PA15 state = 1
-            data.port = PA; data.pin  = 15;
-            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&data, 8, 0);
-
-            // set PL10 state = 0
-            data.port = PL; data.pin  = 10;
-            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&data, 8, 0);
+            gpio_pin_set(PA,15);
+            gpio_pin_clear(PL,10);
 
             t = 0;
-            printf("%d: PA15 = 1, PL10 = 0 \n", n);
+            printf("%d: PA15 = 1, PL10 = 0 \n", n); // debug
         }
         else
         {
-            // set PA15 state = 0
-            data.port = PA; data.pin  = 15;
-            msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&data, 8, 0);
-
-            // set PL10 state = 1
-            data.port = PL; data.pin  = 10;
-            msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&data, 8, 0);
+            gpio_pin_clear(PA,15);
+            gpio_pin_set(PL,10);
 
             t = 1;
-            printf("%d: PA15 = 0, PL10 = 1 \n", n);
+            printf("%d: PA15 = 0, PL10 = 1 \n", n); // debug
         }
     }
 
@@ -114,6 +86,156 @@ int main(void)
 
 
 // public methods
+
+/**
+ * @brief   set pin mode to OUTPUT
+ * @param   port    GPIO port number    (0 .. GPIO_PORTS_CNT)
+ * @param   pin     GPIO pin number     (0 .. GPIO_PINS_CNT)
+ * @retval  none
+ */
+void gpio_pin_setup_for_output(uint32_t port, uint32_t pin)
+{
+    struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
+
+    tx.port = port; tx.pin  = pin;
+    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&tx, 8, 0);
+}
+
+/**
+ * @brief   set pin mode to INPUT
+ * @param   port    GPIO port number    (0 .. GPIO_PORTS_CNT)
+ * @param   pin     GPIO pin number     (0 .. GPIO_PINS_CNT)
+ * @retval  none
+ */
+void gpio_pin_setup_for_input(uint32_t port, uint32_t pin)
+{
+    struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
+
+    tx.port = port; tx.pin  = pin;
+    msg_send(GPIO_MSG_SETUP_FOR_INPUT, (uint8_t*)&tx, 8, 0);
+}
+
+/**
+ * @brief   get pin state
+ * @param   port    GPIO port number    (0 .. GPIO_PORTS_CNT)
+ * @param   pin     GPIO pin number     (0 .. GPIO_PINS_CNT)
+ * @retval  1 (HIGH)
+ * @retval  0 (LOW)
+ */
+uint32_t gpio_pin_get(uint32_t port, uint32_t pin)
+{
+    uint32_t n = 0;
+    struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
+    struct gpio_msg_state_t rx = *((struct gpio_msg_state_t *) &msg_buf);
+
+    tx.port = port; tx.pin = pin;
+    msg_send(GPIO_MSG_PIN_GET, (uint8_t*)&tx, 4, 0);
+
+    // finite loop, only 999999 tries to read an answer
+    for ( n = 999999; n--; )
+    {
+        if ( msg_read(GPIO_MSG_PIN_GET, (uint8_t*)&rx, 0) < 0 ) continue;
+        return rx.state;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief   set pin state to HIGH (1)
+ * @param   port    GPIO port number    (0 .. GPIO_PORTS_CNT)
+ * @param   pin     GPIO pin number     (0 .. GPIO_PINS_CNT)
+ * @retval  none
+ */
+void gpio_pin_set(uint32_t port, uint32_t pin)
+{
+    struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
+
+    tx.port = port; tx.pin  = pin;
+    msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&tx, 8, 0);
+}
+
+/**
+ * @brief   set pin state to LOW (0)
+ * @param   port    GPIO port number    (0 .. GPIO_PORTS_CNT)
+ * @param   pin     GPIO pin number     (0 .. GPIO_PINS_CNT)
+ * @retval  none
+ */
+void gpio_pin_clear(uint32_t port, uint32_t pin)
+{
+    struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
+
+    tx.port = port; tx.pin  = pin;
+    msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&tx, 8, 0);
+}
+
+/**
+ * @brief   get port state
+ * @param   port    GPIO port number (0 .. GPIO_PORTS_CNT)
+ * @note    each bit value of returned value represents port pin state
+ * @retval  0 .. 0xFFFFFFFF
+ */
+uint32_t gpio_port_get(uint32_t port)
+{
+    uint32_t n = 0;
+    struct gpio_msg_port_t tx = *((struct gpio_msg_port_t *) &msg_buf);
+    struct gpio_msg_state_t rx = *((struct gpio_msg_state_t *) &msg_buf);
+
+    tx.port = port;
+    msg_send(GPIO_MSG_PORT_GET, (uint8_t*)&tx, 4, 0);
+
+    // finite loop, only 999999 tries to read an answer
+    for ( n = 999999; n--; )
+    {
+        if ( msg_read(GPIO_MSG_PORT_GET, (uint8_t*)&rx, 0) < 0 ) continue;
+        return rx.state;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief   set port pins state by mask
+ *
+ * @param   port    GPIO port number        (0 .. GPIO_PORTS_CNT)
+ * @param   mask    GPIO pins mask to set   (0 .. 0xFFFFFFFF) \n\n
+ *                  mask examples: \n\n
+ *                      mask = 0xFFFFFFFF (0b11111111111111111111111111111111) means <b>set all pins state to 1 (HIGH)</b> \n
+ *                      mask = 0x00000001 (0b1) means <b>set pin 0 state to 1 (HIGH)</b> \n
+ *                      mask = 0x0000000F (0b1111) means <b>set pins 0,1,2,3 states to 1 (HIGH)</b>
+ *
+ * @retval  none
+ */
+void gpio_port_set(uint32_t port, uint32_t mask)
+{
+    struct gpio_msg_port_mask_t tx = *((struct gpio_msg_port_mask_t *) &msg_buf);
+
+    tx.port = port; tx.mask  = mask;
+    msg_send(GPIO_MSG_PORT_SET, (uint8_t*)&tx, 8, 0);
+}
+
+/**
+ * @brief   clear port pins state by mask
+ *
+ * @param   port    GPIO port number        (0 .. GPIO_PORTS_CNT)
+ * @param   mask    GPIO pins mask to clear (0 .. 0xFFFFFFFF) \n\n
+ *                  mask examples: \n\n
+ *                  mask = 0xFFFFFFFF (0b11111111111111111111111111111111) means <b>set all pins state to 0 (LOW)</b> \n
+ *                  mask = 0x00000003 (0b11) means <b>set pins 0,1 states to 0 (LOW)</b> \n
+ *                  mask = 0x00000008 (0b1000) means <b>set pin 3 state to 0 (LOW)</b>
+ *
+ * @retval  none
+ */
+void gpio_port_clear(uint32_t port, uint32_t mask)
+{
+    struct gpio_msg_port_mask_t tx = *((struct gpio_msg_port_mask_t *) &msg_buf);
+
+    tx.port = port; tx.mask  = mask;
+    msg_send(GPIO_MSG_PORT_CLEAR, (uint8_t*)&tx, 8, 0);
+}
+
+
+
 
 /**
  * @brief   read a message from the ARISC cpu
@@ -163,9 +285,6 @@ int8_t msg_read(uint8_t type, uint8_t * msg, uint8_t bswap)
 
     return -1;
 }
-
-
-
 
 /**
  * @brief   send a message to the ARISC cpu
@@ -265,9 +384,6 @@ void mem_init(void)
         msg_arm[m]   = (struct msg_t *) (vrt_block_addr + (m * MSG_MAX_LEN + MSG_CPU_BLOCK_SIZE)/4);
     }
 }
-
-
-
 
 void mem_deinit(void)
 {
