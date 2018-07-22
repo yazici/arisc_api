@@ -16,13 +16,17 @@
 
 // public method prototypes
 
+void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted);
+void pulsgen_task_setup(uint8_t c, uint32_t period, uint32_t toggles, uint8_t duty, uint32_t delay);
+void pulsgen_task_abort(uint8_t c);
+uint8_t pulsgen_task_state(uint8_t c);
+uint32_t pulsgen_task_toggles(uint8_t c);
+
 void gpio_pin_setup_for_output(uint32_t port, uint32_t pin);
 void gpio_pin_setup_for_input(uint32_t port, uint32_t pin);
-
 uint32_t gpio_pin_get(uint32_t port, uint32_t pin);
 void gpio_pin_set(uint32_t port, uint32_t pin);
 void gpio_pin_clear(uint32_t port, uint32_t pin);
-
 uint32_t gpio_port_get(uint32_t port);
 void gpio_port_set(uint32_t port, uint32_t mask);
 void gpio_port_clear(uint32_t port, uint32_t mask);
@@ -136,21 +140,6 @@ struct pulsgen_msg_toggles_t { uint32_t toggles; };
 
 
 #define ENCODER_CH_CNT 8  ///< maximum number of encoder counter channels
-
-/// a channel parameters
-struct encoder_ch_t
-{
-    uint8_t     enabled;
-    uint8_t     using_B;
-    uint8_t     using_Z;
-
-    uint8_t     port[3];
-    uint8_t     pin[3];
-    uint8_t     state[3];
-
-    int32_t     counts;
-    uint8_t     AB_state;
-};
 
 enum { PHASE_A, PHASE_B, PHASE_Z };
 enum { PH_A, PH_B, PH_Z };

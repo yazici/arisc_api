@@ -88,6 +88,122 @@ int main(void)
 // public methods
 
 /**
+ * @brief   setup GPIO pin for the selected channel
+ *
+ * @param   c           channel id
+ * @param   port        GPIO port number
+ * @param   pin         GPIO pin number
+ * @param   inverted    invert pin state?
+ *
+ * @retval  none
+ */
+void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted)
+{
+    struct pulsgen_msg_pin_setup_t tx = *((struct pulsgen_msg_pin_setup_t *) &msg_buf);
+
+    tx.ch = c;
+    tx.port = port;
+    tx.pin = pin;
+    tx.inverted = inverted;
+
+    msg_send(PULSGEN_MSG_PIN_SETUP, (uint8_t*)&tx, 4*4, 0);
+}
+
+/**
+ * @brief   setup a new task for the selected channel
+ *
+ * @param   c           channel id
+ * @param   period      pin state change period (in microseconds)
+ * @param   toggles     number of pin state changes
+ * @param   duty        duty cycle value (0..PULSGEN_MAX_DUTY)
+ * @param   delay       task start delay (in microseconds)
+ *
+ * @retval  none
+ */
+void pulsgen_task_setup(uint8_t c, uint32_t period, uint32_t toggles, uint8_t duty, uint32_t delay)
+{
+    struct pulsgen_msg_task_setup_t tx = *((struct pulsgen_msg_task_setup_t *) &msg_buf);
+
+    tx.ch = c;
+    tx.period = period;
+    tx.toggles = toggles;
+    tx.duty = duty;
+    tx.delay = delay;
+
+    msg_send(PULSGEN_MSG_TASK_SETUP, (uint8_t*)&tx, 5*4, 0);
+}
+
+/**
+ * @brief   abort current task for the selected channel
+ * @param   c       channel id
+ * @retval  none
+ */
+void pulsgen_task_abort(uint8_t c)
+{
+    struct pulsgen_msg_ch_t tx = *((struct pulsgen_msg_ch_t *) &msg_buf);
+
+    tx.ch = c;
+
+    msg_send(PULSGEN_MSG_TASK_ABORT, (uint8_t*)&tx, 1*4, 0);
+}
+
+/**
+ * @brief   get current task state for the selected channel
+ *
+ * @param   c   channel id
+ *
+ * @retval  0   (channel have no task)
+ * @retval  1   (channel have a task)
+ */
+uint8_t pulsgen_task_state(uint8_t c)
+{
+    struct pulsgen_msg_ch_t tx = *((struct pulsgen_msg_ch_t *) &msg_buf);
+    struct pulsgen_msg_state_t rx = *((struct pulsgen_msg_state_t *) &msg_buf);
+
+    tx.ch = c;
+
+    msg_send(PULSGEN_MSG_TASK_STATE, (uint8_t*)&tx, 1*4, 0);
+
+    // finite loop, only 999999 tries to read an answer
+    uint32_t n = 0;
+    for ( n = 999999; n--; )
+    {
+        if ( msg_read(PULSGEN_MSG_TASK_STATE, (uint8_t*)&rx, 0) < 0 ) continue;
+        else return rx.state;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief   get current pin state changes since task start
+ * @param   c   channel id
+ * @retval  0..0xFFFFFFFF
+ */
+uint32_t pulsgen_task_toggles(uint8_t c)
+{
+    struct pulsgen_msg_ch_t tx = *((struct pulsgen_msg_ch_t *) &msg_buf);
+    struct pulsgen_msg_toggles_t rx = *((struct pulsgen_msg_toggles_t *) &msg_buf);
+
+    tx.ch = c;
+
+    msg_send(PULSGEN_MSG_TASK_TOGGLES, (uint8_t*)&tx, 1*4, 0);
+
+    // finite loop, only 999999 tries to read an answer
+    uint32_t n = 0;
+    for ( n = 999999; n--; )
+    {
+        if ( msg_read(PULSGEN_MSG_TASK_TOGGLES, (uint8_t*)&rx, 0) < 0 ) continue;
+        else return rx.toggles;
+    }
+
+    return 0;
+}
+
+
+
+
+/**
  * @brief   set pin mode to OUTPUT
  * @param   port    GPIO port number    (0 .. GPIO_PORTS_CNT)
  * @param   pin     GPIO pin number     (0 .. GPIO_PINS_CNT)
@@ -97,8 +213,10 @@ void gpio_pin_setup_for_output(uint32_t port, uint32_t pin)
 {
     struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
 
-    tx.port = port; tx.pin  = pin;
-    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&tx, 8, 0);
+    tx.port = port;
+    tx.pin  = pin;
+
+    msg_send(GPIO_MSG_SETUP_FOR_OUTPUT, (uint8_t*)&tx, 2*4, 0);
 }
 
 /**
@@ -111,8 +229,10 @@ void gpio_pin_setup_for_input(uint32_t port, uint32_t pin)
 {
     struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
 
-    tx.port = port; tx.pin  = pin;
-    msg_send(GPIO_MSG_SETUP_FOR_INPUT, (uint8_t*)&tx, 8, 0);
+    tx.port = port;
+    tx.pin  = pin;
+
+    msg_send(GPIO_MSG_SETUP_FOR_INPUT, (uint8_t*)&tx, 2*4, 0);
 }
 
 /**
@@ -124,18 +244,20 @@ void gpio_pin_setup_for_input(uint32_t port, uint32_t pin)
  */
 uint32_t gpio_pin_get(uint32_t port, uint32_t pin)
 {
-    uint32_t n = 0;
     struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
     struct gpio_msg_state_t rx = *((struct gpio_msg_state_t *) &msg_buf);
 
-    tx.port = port; tx.pin = pin;
-    msg_send(GPIO_MSG_PIN_GET, (uint8_t*)&tx, 4, 0);
+    tx.port = port;
+    tx.pin = pin;
+
+    msg_send(GPIO_MSG_PIN_GET, (uint8_t*)&tx, 2*4, 0);
 
     // finite loop, only 999999 tries to read an answer
+    uint32_t n = 0;
     for ( n = 999999; n--; )
     {
         if ( msg_read(GPIO_MSG_PIN_GET, (uint8_t*)&rx, 0) < 0 ) continue;
-        return rx.state;
+        else return rx.state;
     }
 
     return 0;
@@ -151,8 +273,10 @@ void gpio_pin_set(uint32_t port, uint32_t pin)
 {
     struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
 
-    tx.port = port; tx.pin  = pin;
-    msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&tx, 8, 0);
+    tx.port = port;
+    tx.pin  = pin;
+
+    msg_send(GPIO_MSG_PIN_SET, (uint8_t*)&tx, 2*4, 0);
 }
 
 /**
@@ -165,8 +289,10 @@ void gpio_pin_clear(uint32_t port, uint32_t pin)
 {
     struct gpio_msg_port_pin_t tx = *((struct gpio_msg_port_pin_t *) &msg_buf);
 
-    tx.port = port; tx.pin  = pin;
-    msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&tx, 8, 0);
+    tx.port = port;
+    tx.pin  = pin;
+
+    msg_send(GPIO_MSG_PIN_CLEAR, (uint8_t*)&tx, 2*4, 0);
 }
 
 /**
@@ -177,18 +303,19 @@ void gpio_pin_clear(uint32_t port, uint32_t pin)
  */
 uint32_t gpio_port_get(uint32_t port)
 {
-    uint32_t n = 0;
     struct gpio_msg_port_t tx = *((struct gpio_msg_port_t *) &msg_buf);
     struct gpio_msg_state_t rx = *((struct gpio_msg_state_t *) &msg_buf);
 
     tx.port = port;
-    msg_send(GPIO_MSG_PORT_GET, (uint8_t*)&tx, 4, 0);
+
+    msg_send(GPIO_MSG_PORT_GET, (uint8_t*)&tx, 1*4, 0);
 
     // finite loop, only 999999 tries to read an answer
+    uint32_t n = 0;
     for ( n = 999999; n--; )
     {
         if ( msg_read(GPIO_MSG_PORT_GET, (uint8_t*)&rx, 0) < 0 ) continue;
-        return rx.state;
+        else return rx.state;
     }
 
     return 0;
@@ -210,8 +337,10 @@ void gpio_port_set(uint32_t port, uint32_t mask)
 {
     struct gpio_msg_port_mask_t tx = *((struct gpio_msg_port_mask_t *) &msg_buf);
 
-    tx.port = port; tx.mask  = mask;
-    msg_send(GPIO_MSG_PORT_SET, (uint8_t*)&tx, 8, 0);
+    tx.port = port;
+    tx.mask = mask;
+
+    msg_send(GPIO_MSG_PORT_SET, (uint8_t*)&tx, 2*4, 0);
 }
 
 /**
@@ -230,8 +359,10 @@ void gpio_port_clear(uint32_t port, uint32_t mask)
 {
     struct gpio_msg_port_mask_t tx = *((struct gpio_msg_port_mask_t *) &msg_buf);
 
-    tx.port = port; tx.mask  = mask;
-    msg_send(GPIO_MSG_PORT_CLEAR, (uint8_t*)&tx, 8, 0);
+    tx.port = port;
+    tx.mask = mask;
+
+    msg_send(GPIO_MSG_PORT_CLEAR, (uint8_t*)&tx, 2*4, 0);
 }
 
 
