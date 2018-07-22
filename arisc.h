@@ -16,6 +16,13 @@
 
 // public method prototypes
 
+void encoder_pin_setup(uint8_t c, uint8_t phase, uint8_t port, uint8_t pin);
+void encoder_setup(uint8_t c, uint8_t using_B, uint8_t using_Z);
+void encoder_state_set(uint8_t c, uint8_t state);
+void encoder_counts_set(uint8_t c, int32_t counts);
+uint8_t encoder_state_get(uint8_t c);
+int32_t encoder_counts_get(uint8_t c);
+
 void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted);
 void pulsgen_task_setup(uint8_t c, uint32_t period, uint32_t toggles, uint8_t duty, uint32_t delay);
 void pulsgen_task_abort(uint8_t c);
