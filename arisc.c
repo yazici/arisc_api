@@ -38,37 +38,40 @@ int main(void)
 
     mem_init();
 
-    // --- GPIO TEST 1 ---------------------------------------------------------
+    // --- PULSGEN TEST 1 ---------------------------------------------------------
 
-    // setup pins PA15 and PL10
-    gpio_pin_setup_for_output(PA,15);
-    gpio_pin_setup_for_output(PL,10);
+    // use GPIO pin PA15 for the channel 0 output
+    pulsgen_pin_setup(0, PA, 15, 0);
+    // use GPIO pin PL10 for the channel 1 output
+    pulsgen_pin_setup(1, PL, 10, 0);
 
     for(;;)
     {
-        // main loop is finite, only 100 pin toggles
-        if ( (++n) > 100 ) break;
+        // main loop is finite, only 10 pulsgen tasks
+        if ( (++n) > 10 ) break;
 
-        // 1sec delay
-        usleep(1000000);
-
-        // toggle pins
+        // make some tasks
         if ( t )
         {
-            gpio_pin_set(PA,15);
-            gpio_pin_clear(PL,10);
+            // make 10 pulses by PA15 with 1 sec period and 50% duty
+            pulsgen_task_setup(0, 1000000, 20, 50, 0);
+            // make 100 pulses by PL10 with 0.1 sec period and 50% duty
+            pulsgen_task_setup(1, 100000, 200, 50, 0);
 
             t = 0;
-            printf("%d: PA15 = 1, PL10 = 0 \n", n); // debug
         }
         else
         {
-            gpio_pin_clear(PA,15);
-            gpio_pin_set(PL,10);
+            // make 100 pulses by PA15 with 0.1 sec period and 50% duty
+            pulsgen_task_setup(0, 100000, 200, 50, 0);
+            // make 10 pulses by PL15 with 1 sec period and 50% duty
+            pulsgen_task_setup(1, 1000000, 20, 50, 0);
 
             t = 1;
-            printf("%d: PA15 = 0, PL10 = 1 \n", n); // debug
         }
+
+        // 12s delay
+        usleep(12000000);
     }
 
     // -------------------------------------------------------------------------
