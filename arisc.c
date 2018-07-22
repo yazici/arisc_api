@@ -34,44 +34,42 @@ static uint32_t *vrt_block_addr;
 
 int main(void)
 {
-    uint8_t t = 0, n = 0;
+    int32_t counts_now = 0, counts_prev = 1, n = 0;
 
     mem_init();
 
-    // --- PULSGEN TEST 1 ---------------------------------------------------------
+    // --- ENCODER TEST 1 ---------------------------------------------------------
 
-    // use GPIO pin PA15 for the channel 0 output
-    pulsgen_pin_setup(0, PA, 15, 0);
-    // use GPIO pin PL10 for the channel 1 output
-    pulsgen_pin_setup(1, PL, 10, 0);
+    // setup phase pins of the channel 0
+    encoder_pin_setup(0, PHASE_A, PA, 12);
+    encoder_pin_setup(0, PHASE_B, PA, 11);
+
+    // setup channel 0 parameters
+    encoder_setup(0, 1, 0);
+
+    // reset counter value of the channel 0
+    encoder_counts_set(0, 0);
+
+    // enable channel 0
+    encoder_state_set(0, 1);
 
     for(;;)
     {
-        // main loop is finite, only 10 pulsgen tasks
-        if ( (++n) > 10 ) break;
+        // main loop is finite, program will work only 1 minute
+        if ( (++n) > 100*60 ) break;
 
-        // make some tasks
-        if ( t )
+        // get counts number
+        counts_now = encoder_counts_get(0);
+
+        // display counts number
+        if ( counts_now != counts_prev )
         {
-            // make 10 pulses by PA15 with 1 sec period and 50% duty
-            pulsgen_task_setup(0, 1000000, 20, 50, 0);
-            // make 100 pulses by PL10 with 0.1 sec period and 50% duty
-            pulsgen_task_setup(1, 100000, 200, 50, 0);
-
-            t = 0;
-        }
-        else
-        {
-            // make 100 pulses by PA15 with 0.1 sec period and 50% duty
-            pulsgen_task_setup(0, 100000, 200, 50, 0);
-            // make 10 pulses by PL15 with 1 sec period and 50% duty
-            pulsgen_task_setup(1, 1000000, 20, 50, 0);
-
-            t = 1;
+            printf("%i\n", counts_now);
+            counts_prev = counts_now;
         }
 
-        // 12s delay
-        usleep(12000000);
+        // 10ms delay
+        usleep(10000);
     }
 
     // -------------------------------------------------------------------------
