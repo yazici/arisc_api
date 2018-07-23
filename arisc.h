@@ -44,6 +44,9 @@ int8_t msg_send(uint8_t type, uint8_t * msg, uint8_t length, uint8_t bswap);
 void mem_init(void);
 void mem_deinit(void);
 
+void help(char *func);
+void quit(void);
+
 
 
 

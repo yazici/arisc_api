@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <byteswap.h>
+#include <regex.h>
 #include "arisc.h"
 
 
@@ -27,56 +28,70 @@ static uint8_t msg_buf[MSG_LEN] = {0};
 
 static uint32_t *vrt_block_addr;
 
+#define RE_COMP_FLAGS       (REG_EXTENDED | REG_NEWLINE)
+#define RE_FIND_PORT_PIN    "([0-9]+|P[ABCDEFGL]),([0-9]+)"
+
+static const char * re_find[6] =
+{
+    "(quit|exit)",
+    "help",
+    "gpio_pin_setup_for_output\\(" RE_FIND_PORT_PIN "\\)",
+    "gpio_pin_set\\(" RE_FIND_PORT_PIN "\\)",
+    "gpio_pin_clear\\(" RE_FIND_PORT_PIN "\\)",
+    "gpio_pin_get\\(" RE_FIND_PORT_PIN "\\)",
+};
+
+typedef int32_t (*func_t)();
+
+static func_t re_func[6] =
+{
+    (func_t) &quit,
+    (func_t) &help,
+    (func_t) &gpio_pin_setup_for_output,
+    (func_t) &gpio_pin_set,
+    (func_t) &gpio_pin_clear,
+    (func_t) &gpio_pin_get,
+};
+
 
 
 
 // main entry
 
-int main(void)
+int main(int argc, char *argv[])
 {
-    uint8_t t = 0, n = 0;
+    regex_t re;
+    regmatch_t found;
 
-    mem_init();
+//    mem_init();
 
-    // --- PULSGEN TEST 1 ---------------------------------------------------------
-
-    // use GPIO pin PA15 for the channel 0 output
-    pulsgen_pin_setup(0, PA, 15, 0);
-    // use GPIO pin PL10 for the channel 1 output
-    pulsgen_pin_setup(1, PL, 10, 0);
-
-    for(;;)
+    // start STDIN/STDOUT mode if we have no arguments
+    if ( argc < 2 )
     {
-        // main loop is finite, only 10 pulsgen tasks
-        if ( (++n) > 10 ) break;
 
-        // make some tasks
-        if ( t )
+    }
+    // execute single command and quit if we have some arguments
+    else
+    {
+        uint8_t n = 0;
+        for ( n = 0; n < 6; n++ )
         {
-            // make 10 pulses by PA15 with 1 sec period and 50% duty
-            pulsgen_task_setup(0, 1000000, 20, 50, 0);
-            // make 100 pulses by PL10 with 0.1 sec period and 50% duty
-            pulsgen_task_setup(1, 100000, 200, 50, 0);
+            if ( regcomp(&re, re_find[n], RE_COMP_FLAGS) )
+            {
+                printf("Error while regex compilation: %s \n", re_find[n]);
+                return -1;
+            }
 
-            t = 0;
+            if ( regexec(&re, argv[2], 5, &found, 0) )
+            {
+                printf("Not found: %s \n", re_find[n]);
+            }
+
+            regfree(&re);
         }
-        else
-        {
-            // make 100 pulses by PA15 with 0.1 sec period and 50% duty
-            pulsgen_task_setup(0, 100000, 200, 50, 0);
-            // make 10 pulses by PL15 with 1 sec period and 50% duty
-            pulsgen_task_setup(1, 1000000, 20, 50, 0);
-
-            t = 1;
-        }
-
-        // 12s delay
-        usleep(12000000);
     }
 
-    // -------------------------------------------------------------------------
-
-    mem_deinit();
+//    mem_deinit();
 
     return 0;
 }
@@ -651,4 +666,17 @@ void mem_init(void)
 void mem_deinit(void)
 {
     munmap(vrt_block_addr, 2*MSG_BLOCK_SIZE);
+}
+
+
+
+
+void quit(void)
+{
+    return;
+}
+
+void help(char *func)
+{
+    return;
 }
