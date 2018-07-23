@@ -29,25 +29,29 @@ static uint8_t msg_buf[MSG_LEN] = {0};
 static uint32_t *vrt_block_addr;
 
 #define RE_COMP_FLAGS       (REG_EXTENDED | REG_NEWLINE)
-#define RE_FIND_PORT_PIN    "([0-9]+|P[ABCDEFGL]),([0-9]+)"
+#define RE_PORT_PIN         " *([0-9]+|P[ABCDEFGL]) *, *([0-9]+) *"
+#define RE_OPEN_BRACKET     " *\\("
+#define RE_CLOSE_BRACKET    "\\)"
 
-static const char * re_find[6] =
+static const char * re_find[] =
 {
     "(quit|exit)",
     "help",
-    "gpio_pin_setup_for_output\\(" RE_FIND_PORT_PIN "\\)",
-    "gpio_pin_set\\(" RE_FIND_PORT_PIN "\\)",
-    "gpio_pin_clear\\(" RE_FIND_PORT_PIN "\\)",
-    "gpio_pin_get\\(" RE_FIND_PORT_PIN "\\)",
+    "gpio_pin_setup_for_output" RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
+    "gpio_pin_setup_for_input"  RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
+    "gpio_pin_set"              RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
+    "gpio_pin_clear"            RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
+    "gpio_pin_get"              RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
 };
 
 typedef int32_t (*func_t)();
 
-static func_t re_func[6] =
+static func_t re_func[] =
 {
     (func_t) &quit,
     (func_t) &help,
     (func_t) &gpio_pin_setup_for_output,
+    (func_t) &gpio_pin_setup_for_input,
     (func_t) &gpio_pin_set,
     (func_t) &gpio_pin_clear,
     (func_t) &gpio_pin_get,
@@ -61,20 +65,20 @@ static func_t re_func[6] =
 int main(int argc, char *argv[])
 {
     regex_t re;
-    regmatch_t found;
+    regmatch_t found[10] = {0};
 
 //    mem_init();
 
     // start STDIN/STDOUT mode if we have no arguments
     if ( argc < 2 )
     {
-
+        printf("STDIN/STDOUT mode is off \n");
     }
     // execute single command and quit if we have some arguments
     else
     {
         uint8_t n = 0;
-        for ( n = 0; n < 6; n++ )
+        for ( n = 0; n < 7; n++ )
         {
             if ( regcomp(&re, re_find[n], RE_COMP_FLAGS) )
             {
@@ -82,9 +86,13 @@ int main(int argc, char *argv[])
                 return -1;
             }
 
-            if ( regexec(&re, argv[2], 5, &found, 0) )
+            if ( regexec(&re, argv[1], 10, found, 0) )
             {
                 printf("Not found: %s \n", re_find[n]);
+            }
+            else
+            {
+                printf("Found: %s \n", re_find[n]);
             }
 
             regfree(&re);
