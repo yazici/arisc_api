@@ -44,8 +44,9 @@ int8_t msg_send(uint8_t type, uint8_t * msg, uint8_t length, uint8_t bswap);
 void mem_init(void);
 void mem_deinit(void);
 
-void help(char *func);
-void quit(void);
+int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array, uint32_t array_size);
+int32_t parse_and_exec(const char *str);
+
 
 
 

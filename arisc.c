@@ -28,35 +28,6 @@ static uint8_t msg_buf[MSG_LEN] = {0};
 
 static uint32_t *vrt_block_addr;
 
-#define RE_COMP_FLAGS       (REG_EXTENDED | REG_NEWLINE)
-#define RE_PORT_PIN         " *([0-9]+|P[ABCDEFGL]) *, *([0-9]+) *"
-#define RE_OPEN_BRACKET     " *\\("
-#define RE_CLOSE_BRACKET    "\\)"
-
-static const char * re_find[] =
-{
-    "(quit|exit)",
-    "help",
-    "gpio_pin_setup_for_output" RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
-    "gpio_pin_setup_for_input"  RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
-    "gpio_pin_set"              RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
-    "gpio_pin_clear"            RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
-    "gpio_pin_get"              RE_OPEN_BRACKET RE_PORT_PIN RE_CLOSE_BRACKET,
-};
-
-typedef int32_t (*func_t)();
-
-static func_t re_func[] =
-{
-    (func_t) &quit,
-    (func_t) &help,
-    (func_t) &gpio_pin_setup_for_output,
-    (func_t) &gpio_pin_setup_for_input,
-    (func_t) &gpio_pin_set,
-    (func_t) &gpio_pin_clear,
-    (func_t) &gpio_pin_get,
-};
-
 
 
 
@@ -64,39 +35,18 @@ static func_t re_func[] =
 
 int main(int argc, char *argv[])
 {
-    regex_t re;
-    regmatch_t found[10] = {0};
-
 //    mem_init();
 
     // start STDIN/STDOUT mode if we have no arguments
     if ( argc < 2 )
     {
-        printf("STDIN/STDOUT mode is off \n");
+        printf("STDIN/STDOUT mode is under constructed \n");
     }
-    // execute single command and quit if we have some arguments
+    // parse and execute every argument
     else
     {
-        uint8_t n = 0;
-        for ( n = 0; n < 7; n++ )
-        {
-            if ( regcomp(&re, re_find[n], RE_COMP_FLAGS) )
-            {
-                printf("Error while regex compilation: %s \n", re_find[n]);
-                return -1;
-            }
-
-            if ( regexec(&re, argv[1], 10, found, 0) )
-            {
-                printf("Not found: %s \n", re_find[n]);
-            }
-            else
-            {
-                printf("Found: %s \n", re_find[n]);
-            }
-
-            regfree(&re);
-        }
+        uint32_t a;
+        for ( a = 1; a < argc; a++ ) parse_and_exec(argv[a]);
     }
 
 //    mem_deinit();
@@ -679,12 +629,153 @@ void mem_deinit(void)
 
 
 
-void quit(void)
+int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array, uint32_t array_size)
 {
-    return;
+    regex_t re;
+    regmatch_t matches[10] = {0};
+    int32_t ret = 0;
+
+    // on regex compilation fail
+    if ( regcomp(&re, pattern, REG_EXTENDED|REG_NEWLINE) )
+    {
+        printf("  regex compilation fail: %s \n", pattern);
+        ret = 1;
+    }
+    // on regex match fail
+    else if ( regexec(&re, source, 10, &matches[0], 0) )
+    {
+//        printf("  regex match fail: %s \n", pattern);
+        ret = 2;
+    }
+    // on regex match success
+    else
+    {
+        uint32_t size;
+        uint32_t n;
+        char match[48] = {0};
+        uint32_t *arg = match_array;
+
+//        printf("  regex match: %s \n", pattern);
+
+        // browse all matches
+        for ( n = 1; (n < array_size + 1) && (n < 10) && matches[n].rm_so != -1; arg++, n++ )
+        {
+            // get match string size
+            size = (uint32_t)(matches[n].rm_eo - matches[n].rm_so);
+
+//            printf("    matches[%d].rm_so = %d, matches[%d].rm_eo = %d \n", n, matches[n].rm_so, n, matches[n].rm_eo);
+//            printf("    size = %d \n", size);
+
+            // string size is limited to buffer size
+            if ( size <= 0 || size >= sizeof match )
+            {
+//                printf("    size of match string (%d) is incorrect \n", size);
+                ret = 3;
+                break;
+            }
+
+            // copy match string to the tmp buffer
+            memcpy(&match[0], source + matches[n].rm_so, (size_t)size);
+            match[size] = 0;
+
+//            printf("    match = '%s' \n", (const char *)&match[0]);
+
+            // if we have a port name
+            if ( size == 2 && match[0] == 'P' && ((match[1] >= 'A' && match[1] <= 'G') || match[1] == 'L') )
+            {
+                *arg = (match[1] == 'L') ? (PL) : (match[1] - 'A');
+            }
+            // if we have a phase name
+            else if ( size >= 4 && match[0] == 'P' && match[1] == 'H' )
+            {
+                uint32_t phase;
+                char phase_char = 40;
+
+                if ( size == 4 )        phase_char = match[3]; // PH_X
+                else if ( size == 7 )   phase_char = match[6]; // PHASE_X
+
+                switch (phase_char) {
+                    case 'A':   phase = PH_A; break;
+                    case 'B':   phase = PH_B; break;
+                    case 'Z':   phase = PH_Z; break;
+                    default:    phase = 40;   break;
+                }
+
+                // if we have an unknown string
+                if ( phase > PH_Z )
+                {
+//                    printf("    unknown phase name `%s` \n", (const char *)&match[0]);
+                    ret = 4;
+                    break;
+                }
+
+                *arg = phase;
+            }
+            // if we have a hex number
+            else if ( size >= 3 && match[0] == '0' && match[1] == 'x' )
+            {
+                *arg = (uint32_t) strtoul((const char *)&match, NULL, 16);
+            }
+            // if we have a binary number
+            else if ( size >= 3 && match[0] == '0' && match[1] == 'b' )
+            {
+                *arg = (uint32_t) strtoul((const char *)&match[2], NULL, 2);
+            }
+            // if we have an unsigned integer
+            else if ( match[0] >= '0' && match[0] <= '9' )
+            {
+                *arg = (uint32_t) strtoul((const char *)&match, NULL, 10);
+            }
+            // if we have a signed integer
+            else if ( size >= 2 && match[0] == '-' && match[1] >= '0' && match[1] <= '9')
+            {
+                *arg = (uint32_t) strtol((const char *)&match, NULL, 10);
+            }
+            // if we have an unknown string
+            else
+            {
+//                printf("    unknown argument string `%s` \n", (const char *)&match[0]);
+                ret = 4;
+                break;
+            }
+        }
+    }
+
+    // free regex memory block
+    regfree(&re);
+
+    return ret;
 }
 
-void help(char *func)
+
+
+
+
+int32_t parse_and_exec(const char *str)
 {
-    return;
+    uint32_t arg[10] = {0};
+
+    #define RE_PORT_PIN " *([0-9]+|P[ABCDEFGL]) *, *([0-9]+|0x[A-Fa-f]+|0b[01]+) *"
+
+    if ( !reg_match(str, "(exit|quit|q)", &arg[0], 0) )
+    {
+        printf("Good bye! \n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "help", &arg[0], 0) )
+    {
+        printf("Help info here! \n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_pin_setup_for_output *\\(" RE_PORT_PIN "\\)", &arg[0], 2) )
+    {
+        printf("gpio_pin_setup_for_output(%u, %i) \n", arg[0], (int32_t)arg[1]);
+        return 0;
+    }
+
+    printf("Unknown command! Type `help` \n");
+
+    return 1;
 }
