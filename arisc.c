@@ -28,6 +28,8 @@ static uint8_t msg_buf[MSG_LEN] = {0};
 
 static uint32_t *vrt_block_addr;
 
+static char *app_name = 0;
+
 
 
 
@@ -36,6 +38,8 @@ static uint32_t *vrt_block_addr;
 int main(int argc, char *argv[])
 {
 //    mem_init();
+
+    app_name = argv[0];
 
     // start STDIN/STDOUT mode if we have no arguments
     if ( argc < 2 )
@@ -755,7 +759,8 @@ int32_t parse_and_exec(const char *str)
 {
     uint32_t arg[10] = {0};
 
-    #define RE_PORT_PIN " *([0-9]+|P[ABCDEFGL]) *, *([0-9]+|0x[A-Fa-f]+|0b[01]+) *"
+    #define UINT " *([0-9]+|0x[A-Fa-f]+|0b[01]+|P[ABCDEFGL]|PH_[ABZ]|PHASE_[ABZ]) *"
+    #define INT " *(\\-?[0-9]+) *"
 
     if ( !reg_match(str, "(exit|quit|q)", &arg[0], 0) )
     {
@@ -765,17 +770,118 @@ int32_t parse_and_exec(const char *str)
 
     if ( !reg_match(str, "help", &arg[0], 0) )
     {
-        printf("Help info here! \n");
+        printf(
+"\n\
+  Usage:\n\
+\n\
+    %s \"function1(param1, param2, ..)\" \"function2(param1, param2, ..)\" ...\n\
+\n\
+    %s help         show help info \n\
+    %s examples     show a few examples \n\
+    %s exit         program quit \n\
+\n\
+  Functions: \n\
+\n\
+         gpio_pin_setup_for_output  (port, pin) \n\
+         gpio_pin_setup_for_input   (port, pin) \n\
+    int  gpio_pin_get               (port, pin) \n\
+         gpio_pin_set               (port, pin) \n\
+         gpio_pin_clear             (port, pin) \n\
+    int  gpio_port_get              (port) \n\
+         gpio_port_set              (port, mask) \n\
+         gpio_port_clear            (port, mask) \n\
+\n\
+         pulsgen_pin_setup          (channel, port, pin, inverted) \n\
+         pulsgen_task_setup         (channel, period, toggles, duty, delay) \n\
+         pulsgen_task_abort         (channel) \n\
+    int  pulsgen_task_state         (channel) \n\
+    int  pulsgen_task_toggles       (channel) \n\
+\n\
+         encoder_pin_setup          (channel, phase, port, pin) \n\
+         encoder_setup              (channel, using_B, using_Z) \n\
+         encoder_state_set          (channel, state) \n\
+         encoder_counts_set         (channel, counts) \n\
+    int  encoder_state_get          (channel) \n\
+    int  encoder_counts_get         (channel) \n\
+\n\
+  Legend: \n\
+\n\
+    port        GPIO port (0..7, PA, PB, PC, PD, PE, PF, PG, PL)\n\
+    pin         GPIO pin (0..31)\n\
+    mask        GPIO pins mask (0b0 .. 0b11111111111111111111111111111111)\n\
+\n\
+    channel     channel ID (0..31 for pulsgen_, 0-7 for encoder_)\n\
+    inverted    invert GPIO pin? (0..1)\n\
+    period      pulse period in microseconds (0..4294967295)\n\
+    toggles     number of pin state changes (0..4294967295, 0=infinite)\n\
+    duty        pulse duty cycle (0..100)\n\
+    delay       start delay in microseconds (0..4294967295)\n\
+\n\
+    phase       encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
+    using_B     use phase B? (0..1)\n\
+    using_Z     use phase Z? (0..1)\n\
+    state       channel state (0..1)\n\
+    counts      channel counts value (-2147483647 .. 2147483647)\n\
+\n",
+            app_name, app_name, app_name, app_name
+        );
         return 0;
     }
 
-    if ( !reg_match(str, "gpio_pin_setup_for_output *\\(" RE_PORT_PIN "\\)", &arg[0], 2) )
+    if ( !reg_match(str, "example", &arg[0], 0) )
+    {
+        printf(
+"\n\
+  GPIO examples:\n\
+\n\
+    %s \"gpio_pin_setup_for_output(PA,15)\" # setup PA15 pin as output \n\
+    %s \"gpio_pin_clear(PA,15)\"            # set PA15 state to 0 \n\
+    %s \"gpio_pin_set(PA,15)\"              # set PA15 state to 1 \n\
+    %s \"gpio_pin_get(PA,15)\"              # get PA15 state \n\
+    %s \"gpio_port_clear(PA, 0b11)\"        # set PA0,PA1 state to 0 \n\
+    %s \"gpio_port_set(PA, 0b1011)\"        # set PA0,PA1,PA3 state to 1 \n\
+    %s \"gpio_port_get(PA)\"                # get PA port all pins state \n\
+\n\
+  PULSGEN examples:\n\
+\n\
+    # use PA15 pin for the channel 0 output \n\
+    %s \"pulsgen_pin_setup(0,PA,15,0)\" \n\
+\n\
+    # make 100 pulses with 1Hz period and 50%% duty cycle \n\
+    %s \"pulsgen_task_setup(0,1000000,200,50,0)\" \n\
+\n\
+    %s \"pulsgen_task_state(0)\"            # get channel 0 state \n\
+    %s \"pulsgen_task_toggles(0)\"          # get channel 0 toggles \n\
+    %s \"pulsgen_task_abort(0)\"            # stop channel 0 \n\
+\n\
+  ENCODER examples:\n\
+\n\
+    %s \"encoder_pin_setup(0,PH_A,PA,3)\"   # use PA3 pin as phase A input \n\
+    %s \"encoder_pin_setup(0,PH_B,PA,5)\"   # use PA5 pin as phase B input \n\
+    %s \"encoder_setup(0,1,0)\"             # use phase B, don't use phase Z\n\
+    %s \"encoder_counts_set(0,0)\"          # reset channel 0 counts value \n\
+    %s \"encoder_state_set(0,1)\"           # start channel 0\n\
+    %s \"encoder_counts_get(0,0)\"          # get channel 0 counts value \n\
+    %s \"encoder_state_get(0)\"             # get channel 0 state \n\
+    %s \"encoder_state_set(0,0)\"           # stop channel 0\n\
+\n",
+            app_name, app_name, app_name, app_name, app_name, app_name, app_name,
+            app_name, app_name, app_name, app_name, app_name, app_name, app_name,
+            app_name, app_name, app_name, app_name, app_name, app_name
+        );
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_pin_setup_for_output *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
         printf("gpio_pin_setup_for_output(%u, %i) \n", arg[0], (int32_t)arg[1]);
         return 0;
     }
 
     printf("Unknown command! Type `help` \n");
+
+    #undef UINT
+    #undef INT
 
     return 1;
 }
