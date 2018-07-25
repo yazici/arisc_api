@@ -762,6 +762,8 @@ int32_t parse_and_exec(const char *str)
     #define UINT " *([0-9]+|0x[A-Fa-f]+|0b[01]+|P[ABCDEFGL]|PH_[ABZ]|PHASE_[ABZ]) *"
     #define INT " *(\\-?[0-9]+) *"
 
+    // --- HELP, EXAMPLES, EXIT ------
+
     if ( !reg_match(str, "(exit|quit|q)", &arg[0], 0) )
     {
         printf("Good bye! \n");
@@ -861,20 +863,150 @@ int32_t parse_and_exec(const char *str)
     %s \"encoder_setup(0,1,0)\"             # use phase B, don't use phase Z\n\
     %s \"encoder_counts_set(0,0)\"          # reset channel 0 counts value \n\
     %s \"encoder_state_set(0,1)\"           # start channel 0\n\
-    %s \"encoder_counts_get(0,0)\"          # get channel 0 counts value \n\
+    %s \"encoder_counts_get(0)\"            # get channel 0 counts value \n\
     %s \"encoder_state_get(0)\"             # get channel 0 state \n\
-    %s \"encoder_state_set(0,0)\"           # stop channel 0\n\
 \n",
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
-            app_name, app_name, app_name, app_name, app_name, app_name
+            app_name, app_name, app_name, app_name, app_name
         );
         return 0;
     }
 
+    // --- GPIO ------
+
     if ( !reg_match(str, "gpio_pin_setup_for_output *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        printf("gpio_pin_setup_for_output(%u, %i) \n", arg[0], (int32_t)arg[1]);
+        //gpio_pin_setup_for_output(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_pin_setup_for_input *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        //gpio_pin_setup_for_input(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_pin_set *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        //gpio_pin_set(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_pin_clear *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        //gpio_pin_clear(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_pin_get *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        printf("%u\n", 1/*gpio_pin_get(arg[0], arg[1])*/);
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_port_set *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        //gpio_port_set(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_port_clear *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        //gpio_port_clear(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_port_get *\\("UINT"\\)", &arg[0], 1) )
+    {
+        uint32_t s = 0x12345678/*gpio_port_get(arg[0], arg[1])*/;
+        uint32_t b = 32;
+        printf("%u, 0x%X, 0b", s, s);
+        for ( ; b--; ) printf("%u", (s & (1U << b) ? 1 : 0));
+        printf("\n");
+        return 0;
+    }
+
+    // --- PULSGEN ------
+
+    if ( !reg_match(str, "pulsgen_pin_setup *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
+    {
+        //pulsgen_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_task_setup *\\("UINT","UINT","UINT","UINT","UINT"\\)", &arg[0], 5) )
+    {
+        //pulsgen_task_setup(arg[0], arg[1], arg[2], arg[3], arg[4]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_task_abort *\\("UINT"\\)", &arg[0], 1) )
+    {
+        //pulsgen_task_abort(arg[0]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_task_state *\\("UINT"\\)", &arg[0], 1) )
+    {
+        printf("%u\n", 1/*pulsgen_task_state(arg[0])*/);
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_task_toggles *\\("UINT"\\)", &arg[0], 1) )
+    {
+        printf("%u\n", 1/*pulsgen_task_toggles(arg[0])*/);
+        return 0;
+    }
+
+    // --- ENCODER ------
+
+    if ( !reg_match(str, "encoder_pin_setup *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
+    {
+        //encoder_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_setup *\\("UINT","UINT","UINT"\\)", &arg[0], 3) )
+    {
+        //encoder_setup(arg[0], arg[1], arg[2]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_state_set *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+        //encoder_state_set(arg[0], arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_counts_set *\\("UINT","INT"\\)", &arg[0], 2) )
+    {
+        //encoder_counts_set(arg[0], (int32_t)arg[1]);
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_state_get *\\("UINT"\\)", &arg[0], 1) )
+    {
+        printf("%u\n", 1/*encoder_state_get(arg[0])*/);
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_counts_get *\\("UINT"\\)", &arg[0], 1) )
+    {
+        printf("%i\n", -1/*encoder_counts_get(arg[0])*/);
         return 0;
     }
 
