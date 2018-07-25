@@ -22,6 +22,8 @@
 
 // private vars
 
+#define TEST 0 // 0 = real execution of ARISC functions, 1 = just a safe test
+
 static struct msg_t * msg_arisc[MSG_MAX_CNT] = {0};
 static struct msg_t * msg_arm[MSG_MAX_CNT] = {0};
 static uint8_t msg_buf[MSG_LEN] = {0};
@@ -44,7 +46,21 @@ int main(int argc, char *argv[])
     // start STDIN/STDOUT mode if we have no arguments
     if ( argc < 2 )
     {
-        printf("STDIN/STDOUT mode is under constructed \n");
+        char input_str[255] = {0};
+
+        printf("\n\
+  Welcome to stdin/stdout mode of ARISC CNC API.\n\
+\n\
+  Type `help` to see help info.\n\
+  Type `examples` to see working examples.\n\
+  Type `q`|`quit`|`exit` to quit the program.\n\
+            \n");
+
+        for(;;)
+        {
+            fgets((char *)&input_str[0], 254, stdin);
+            if ( parse_and_exec((char *)&input_str[0]) == -1 ) break;
+        }
     }
     // parse and execute every argument
     else
@@ -648,7 +664,6 @@ int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array
     // on regex match fail
     else if ( regexec(&re, source, 10, &matches[0], 0) )
     {
-//        printf("  regex match fail: %s \n", pattern);
         ret = 2;
     }
     // on regex match success
@@ -659,21 +674,15 @@ int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array
         char match[48] = {0};
         uint32_t *arg = match_array;
 
-//        printf("  regex match: %s \n", pattern);
-
         // browse all matches
         for ( n = 1; (n < array_size + 1) && (n < 10) && matches[n].rm_so != -1; arg++, n++ )
         {
             // get match string size
             size = (uint32_t)(matches[n].rm_eo - matches[n].rm_so);
 
-//            printf("    matches[%d].rm_so = %d, matches[%d].rm_eo = %d \n", n, matches[n].rm_so, n, matches[n].rm_eo);
-//            printf("    size = %d \n", size);
-
             // string size is limited to buffer size
             if ( size <= 0 || size >= sizeof match )
             {
-//                printf("    size of match string (%d) is incorrect \n", size);
                 ret = 3;
                 break;
             }
@@ -681,8 +690,6 @@ int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array
             // copy match string to the tmp buffer
             memcpy(&match[0], source + matches[n].rm_so, (size_t)size);
             match[size] = 0;
-
-//            printf("    match = '%s' \n", (const char *)&match[0]);
 
             // if we have a port name
             if ( size == 2 && match[0] == 'P' && ((match[1] >= 'A' && match[1] <= 'G') || match[1] == 'L') )
@@ -708,7 +715,6 @@ int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array
                 // if we have an unknown string
                 if ( phase > PH_Z )
                 {
-//                    printf("    unknown phase name `%s` \n", (const char *)&match[0]);
                     ret = 4;
                     break;
                 }
@@ -766,8 +772,7 @@ int32_t parse_and_exec(const char *str)
 
     if ( !reg_match(str, "(exit|quit|q)", &arg[0], 0) )
     {
-        printf("Good bye! \n");
-        return 0;
+        return -1;
     }
 
     if ( !reg_match(str, "help", &arg[0], 0) )
@@ -780,7 +785,7 @@ int32_t parse_and_exec(const char *str)
 \n\
     %s help         show help info \n\
     %s examples     show a few examples \n\
-    %s exit         program quit \n\
+    %s exit|quit|q  program quit \n\
 \n\
   Functions: \n\
 \n\
@@ -824,8 +829,11 @@ int32_t parse_and_exec(const char *str)
     using_Z     use phase Z? (0..1)\n\
     state       channel state (0..1)\n\
     counts      channel counts value (-2147483647 .. 2147483647)\n\
+\n\
+  NOTE:\n\
+    If you are using stdin/stdout mode, omit `%s` and any \" brackets\n\
 \n",
-            app_name, app_name, app_name, app_name
+            app_name, app_name, app_name, app_name, app_name
         );
         return 0;
     }
@@ -865,10 +873,13 @@ int32_t parse_and_exec(const char *str)
     %s \"encoder_state_set(0,1)\"           # start channel 0\n\
     %s \"encoder_counts_get(0)\"            # get channel 0 counts value \n\
     %s \"encoder_state_get(0)\"             # get channel 0 state \n\
+\n\
+  NOTE:\n\
+    If you are using stdin/stdout mode, omit `%s` and any \" brackets\n\
 \n",
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
-            app_name, app_name, app_name, app_name, app_name
+            app_name, app_name, app_name, app_name, app_name, app_name
         );
         return 0;
     }
@@ -877,55 +888,75 @@ int32_t parse_and_exec(const char *str)
 
     if ( !reg_match(str, "gpio_pin_setup_for_output *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //gpio_pin_setup_for_output(arg[0], arg[1]);
+#if !TEST
+        gpio_pin_setup_for_output(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "gpio_pin_setup_for_input *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //gpio_pin_setup_for_input(arg[0], arg[1]);
+#if !TEST
+        gpio_pin_setup_for_input(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "gpio_pin_set *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //gpio_pin_set(arg[0], arg[1]);
+#if !TEST
+        gpio_pin_set(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "gpio_pin_clear *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //gpio_pin_clear(arg[0], arg[1]);
+#if !TEST
+        gpio_pin_clear(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "gpio_pin_get *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        printf("%u\n", 1/*gpio_pin_get(arg[0], arg[1])*/);
+#if !TEST
+        printf("%u\n", gpio_pin_get(arg[0], arg[1]));
+#else
+        printf("%u\n", 1);
+#endif
         return 0;
     }
 
     if ( !reg_match(str, "gpio_port_set *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //gpio_port_set(arg[0], arg[1]);
+#if !TEST
+        gpio_port_set(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "gpio_port_clear *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //gpio_port_clear(arg[0], arg[1]);
+#if !TEST
+        gpio_port_clear(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "gpio_port_get *\\("UINT"\\)", &arg[0], 1) )
     {
-        uint32_t s = 0x12345678/*gpio_port_get(arg[0], arg[1])*/;
+#if !TEST
+        uint32_t s = gpio_port_get(arg[0]);
+#else
+        uint32_t s = 0x12345678;
+#endif
         uint32_t b = 32;
         printf("%u, 0x%X, 0b", s, s);
         for ( ; b--; ) printf("%u", (s & (1U << b) ? 1 : 0));
@@ -937,34 +968,48 @@ int32_t parse_and_exec(const char *str)
 
     if ( !reg_match(str, "pulsgen_pin_setup *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
     {
-        //pulsgen_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+#if !TEST
+        pulsgen_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "pulsgen_task_setup *\\("UINT","UINT","UINT","UINT","UINT"\\)", &arg[0], 5) )
     {
-        //pulsgen_task_setup(arg[0], arg[1], arg[2], arg[3], arg[4]);
+#if !TEST
+        pulsgen_task_setup(arg[0], arg[1], arg[2], arg[3], arg[4]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "pulsgen_task_abort *\\("UINT"\\)", &arg[0], 1) )
     {
-        //pulsgen_task_abort(arg[0]);
+#if !TEST
+        pulsgen_task_abort(arg[0]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "pulsgen_task_state *\\("UINT"\\)", &arg[0], 1) )
     {
-        printf("%u\n", 1/*pulsgen_task_state(arg[0])*/);
+#if !TEST
+        printf("%u\n", pulsgen_task_state(arg[0]));
+#else
+        printf("%u\n", 1);
+#endif
         return 0;
     }
 
     if ( !reg_match(str, "pulsgen_task_toggles *\\("UINT"\\)", &arg[0], 1) )
     {
-        printf("%u\n", 1/*pulsgen_task_toggles(arg[0])*/);
+#if !TEST
+        printf("%u\n", pulsgen_task_toggles(arg[0]));
+#else
+        printf("%u\n", 1);
+#endif
         return 0;
     }
 
@@ -972,41 +1017,57 @@ int32_t parse_and_exec(const char *str)
 
     if ( !reg_match(str, "encoder_pin_setup *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
     {
-        //encoder_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+#if !TEST
+        encoder_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "encoder_setup *\\("UINT","UINT","UINT"\\)", &arg[0], 3) )
     {
-        //encoder_setup(arg[0], arg[1], arg[2]);
+#if !TEST
+        encoder_setup(arg[0], arg[1], arg[2]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "encoder_state_set *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
-        //encoder_state_set(arg[0], arg[1]);
+#if !TEST
+        encoder_state_set(arg[0], arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "encoder_counts_set *\\("UINT","INT"\\)", &arg[0], 2) )
     {
-        //encoder_counts_set(arg[0], (int32_t)arg[1]);
+#if !TEST
+        encoder_counts_set(arg[0], (int32_t)arg[1]);
+#endif
         printf("OK\n");
         return 0;
     }
 
     if ( !reg_match(str, "encoder_state_get *\\("UINT"\\)", &arg[0], 1) )
     {
-        printf("%u\n", 1/*encoder_state_get(arg[0])*/);
+#if !TEST
+        printf("%u\n", encoder_state_get(arg[0]));
+#else
+        printf("%i\n", 1);
+#endif
         return 0;
     }
 
     if ( !reg_match(str, "encoder_counts_get *\\("UINT"\\)", &arg[0], 1) )
     {
-        printf("%i\n", -1/*encoder_counts_get(arg[0])*/);
+#if !TEST
+        printf("%i\n", encoder_counts_get(arg[0]));
+#else
+        printf("%i\n", -1);
+#endif
         return 0;
     }
 
