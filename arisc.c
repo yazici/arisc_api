@@ -789,6 +789,8 @@ int32_t parse_and_exec(const char *str)
 \n\
   Functions: \n\
 \n\
+         gpio_module_state_set      (state) \n\
+         gpio_module_state_get      () \n\
          gpio_pin_setup_for_output  (port, pin) \n\
          gpio_pin_setup_for_input   (port, pin) \n\
     int  gpio_pin_get               (port, pin) \n\
@@ -798,12 +800,16 @@ int32_t parse_and_exec(const char *str)
          gpio_port_set              (port, mask) \n\
          gpio_port_clear            (port, mask) \n\
 \n\
+         pulsgen_module_state_set   (state) \n\
+         pulsgen_module_state_get   () \n\
          pulsgen_pin_setup          (channel, port, pin, inverted) \n\
          pulsgen_task_setup         (channel, period, toggles, duty, delay) \n\
          pulsgen_task_abort         (channel) \n\
     int  pulsgen_task_state         (channel) \n\
     int  pulsgen_task_toggles       (channel) \n\
 \n\
+         encoder_module_state_set   (state) \n\
+         encoder_module_state_get   () \n\
          encoder_pin_setup          (channel, phase, port, pin) \n\
          encoder_setup              (channel, using_B, using_Z) \n\
          encoder_state_set          (channel, state) \n\
@@ -827,7 +833,7 @@ int32_t parse_and_exec(const char *str)
     phase       encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
     using_B     use phase B? (0..1)\n\
     using_Z     use phase Z? (0..1)\n\
-    state       channel state (0..1)\n\
+    state       module state or channel state (0..1)\n\
     counts      channel counts value (-2147483647 .. 2147483647)\n\
 \n\
   NOTE:\n\
