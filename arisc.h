@@ -108,7 +108,10 @@ enum
 
     GPIO_MSG_PORT_GET,
     GPIO_MSG_PORT_SET,
-    GPIO_MSG_PORT_CLEAR
+    GPIO_MSG_PORT_CLEAR,
+
+    GPIO_MSG_MODULE_STATE_SET,
+    GPIO_MSG_MODULE_STATE_GET
 };
 
 /// the message data sizes
@@ -134,7 +137,10 @@ enum
     PULSGEN_MSG_TASK_SETUP,
     PULSGEN_MSG_TASK_ABORT,
     PULSGEN_MSG_TASK_STATE,
-    PULSGEN_MSG_TASK_TOGGLES
+    PULSGEN_MSG_TASK_TOGGLES,
+
+    PULSGEN_MSG_MODULE_STATE_SET,
+    PULSGEN_MSG_MODULE_STATE_GET
 };
 
 /// the message data sizes
@@ -163,7 +169,10 @@ enum
     ENCODER_MSG_STATE_SET,
     ENCODER_MSG_STATE_GET,
     ENCODER_MSG_COUNTS_SET,
-    ENCODER_MSG_COUNTS_GET
+    ENCODER_MSG_COUNTS_GET,
+
+    ENCODER_MSG_MODULE_STATE_SET,
+    ENCODER_MSG_MODULE_STATE_GET
 };
 
 /// the message data sizes
@@ -177,6 +186,7 @@ struct encoder_msg_state_set_t { uint32_t ch; uint32_t state; };
 struct encoder_msg_counts_set_t { uint32_t ch; int32_t counts; };
 struct encoder_msg_state_get_t { uint32_t state; };
 struct encoder_msg_counts_get_t { int32_t counts; };
+struct encoder_msg_state_t { uint32_t state; };
 
 
 

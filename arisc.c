@@ -964,6 +964,41 @@ int32_t parse_and_exec(const char *str)
         return 0;
     }
 
+    if ( !reg_match(str, "gpio_module_state_set *\\("UINT"\\)", &arg[0], 1) )
+    {
+#if !TEST
+        struct gpio_msg_state_t tx = *((struct gpio_msg_state_t *) &msg_buf);
+        tx.state = arg[0];
+        msg_send(GPIO_MSG_MODULE_STATE_SET, (uint8_t*)&tx, 1*4, 0);
+#endif
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "gpio_module_state_get *\\( *\\)", &arg[0], 0) )
+    {
+#if !TEST
+        struct gpio_msg_state_t rx = *((struct gpio_msg_state_t *) &msg_buf);
+
+        msg_send(GPIO_MSG_MODULE_STATE_GET, NULL, 0*4, 0);
+
+        // finite loop, only 999999 tries to read an answer
+        uint32_t n = 0;
+        for ( n = 999999; n--; )
+        {
+            if ( msg_read(GPIO_MSG_MODULE_STATE_GET, (uint8_t*)&rx, 0) < 0 ) continue;
+            else
+            {
+                printf("%u\n", rx.state);
+                break;
+            }
+        }
+#else
+        printf("%u\n", 1);
+#endif
+        return 0;
+    }
+
     // --- PULSGEN ------
 
     if ( !reg_match(str, "pulsgen_pin_setup *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
@@ -1007,6 +1042,41 @@ int32_t parse_and_exec(const char *str)
     {
 #if !TEST
         printf("%u\n", pulsgen_task_toggles(arg[0]));
+#else
+        printf("%u\n", 1);
+#endif
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_module_state_set *\\("UINT"\\)", &arg[0], 1) )
+    {
+#if !TEST
+        struct pulsgen_msg_state_t tx = *((struct pulsgen_msg_state_t *) &msg_buf);
+        tx.state = arg[0];
+        msg_send(PULSGEN_MSG_MODULE_STATE_SET, (uint8_t*)&tx, 1*4, 0);
+#endif
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_module_state_get *\\( *\\)", &arg[0], 0) )
+    {
+#if !TEST
+        struct pulsgen_msg_state_t rx = *((struct pulsgen_msg_state_t *) &msg_buf);
+
+        msg_send(PULSGEN_MSG_MODULE_STATE_GET, NULL, 0*4, 0);
+
+        // finite loop, only 999999 tries to read an answer
+        uint32_t n = 0;
+        for ( n = 999999; n--; )
+        {
+            if ( msg_read(PULSGEN_MSG_MODULE_STATE_GET, (uint8_t*)&rx, 0) < 0 ) continue;
+            else
+            {
+                printf("%u\n", rx.state);
+                break;
+            }
+        }
 #else
         printf("%u\n", 1);
 #endif
@@ -1067,6 +1137,41 @@ int32_t parse_and_exec(const char *str)
         printf("%i\n", encoder_counts_get(arg[0]));
 #else
         printf("%i\n", -1);
+#endif
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_module_state_set *\\("UINT"\\)", &arg[0], 1) )
+    {
+#if !TEST
+        struct encoder_msg_state_t tx = *((struct encoder_msg_state_t *) &msg_buf);
+        tx.state = arg[0];
+        msg_send(ENCODER_MSG_MODULE_STATE_SET, (uint8_t*)&tx, 1*4, 0);
+#endif
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "encoder_module_state_get *\\( *\\)", &arg[0], 0) )
+    {
+#if !TEST
+        struct encoder_msg_state_t rx = *((struct encoder_msg_state_t *) &msg_buf);
+
+        msg_send(ENCODER_MSG_MODULE_STATE_GET, NULL, 0*4, 0);
+
+        // finite loop, only 999999 tries to read an answer
+        uint32_t n = 0;
+        for ( n = 999999; n--; )
+        {
+            if ( msg_read(ENCODER_MSG_MODULE_STATE_GET, (uint8_t*)&rx, 0) < 0 ) continue;
+            else
+            {
+                printf("%u\n", rx.state);
+                break;
+            }
+        }
+#else
+        printf("%u\n", 1);
 #endif
         return 0;
     }
