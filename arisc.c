@@ -39,7 +39,7 @@ static char *app_name = 0;
 
 int main(int argc, char *argv[])
 {
-//    mem_init();
+    mem_init();
 
     app_name = argv[0];
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         for ( a = 1; a < argc; a++ ) parse_and_exec(argv[a]);
     }
 
-//    mem_deinit();
+    mem_deinit();
 
     return 0;
 }
@@ -652,7 +652,7 @@ void mem_deinit(void)
 int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array, uint32_t array_size)
 {
     regex_t re;
-    regmatch_t matches[10] = {0};
+    regmatch_t matches[10] = {{0}};
     int32_t ret = 0;
 
     // on regex compilation fail
