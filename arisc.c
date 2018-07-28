@@ -39,7 +39,7 @@ static char *app_name = 0;
 
 int main(int argc, char *argv[])
 {
-//    mem_init();
+    mem_init();
 
     app_name = argv[0];
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         for ( a = 1; a < argc; a++ ) parse_and_exec(argv[a]);
     }
 
-//    mem_deinit();
+    mem_deinit();
 
     return 0;
 }
