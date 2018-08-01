@@ -24,7 +24,8 @@ uint8_t encoder_state_get(uint8_t c);
 int32_t encoder_counts_get(uint8_t c);
 
 void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted);
-void pulsgen_task_setup(uint8_t c, uint32_t period, uint32_t toggles, uint8_t duty, uint32_t delay);
+void pulsgen_task_setup(uint32_t c, uint32_t toggles, uint32_t pin_setup_time,
+    uint32_t pin_hold_time, uint32_t start_delay);
 void pulsgen_task_abort(uint8_t c);
 uint8_t pulsgen_task_state(uint8_t c);
 uint32_t pulsgen_task_toggles(uint8_t c);
@@ -142,7 +143,8 @@ enum
 
 /// the message data access
 struct pulsgen_msg_pin_setup_t { uint32_t ch; uint32_t port; uint32_t pin; uint32_t inverted; };
-struct pulsgen_msg_task_setup_t { uint32_t ch; uint32_t period; uint32_t toggles; uint32_t duty; uint32_t delay; };
+struct pulsgen_msg_task_setup_t { uint32_t ch; uint32_t toggles;
+    uint32_t pin_setup_time; uint32_t pin_hold_time; uint32_t start_delay; };
 struct pulsgen_msg_ch_t { uint32_t ch; };
 struct pulsgen_msg_state_t { uint32_t state; };
 struct pulsgen_msg_toggles_t { uint32_t toggles; };

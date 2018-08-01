@@ -237,23 +237,30 @@ void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted)
 /**
  * @brief   setup a new task for the selected channel
  *
- * @param   c           channel id
- * @param   period      pin state change period (in microseconds)
- * @param   toggles     number of pin state changes
- * @param   duty        duty cycle value (0..PULSGEN_MAX_DUTY)
- * @param   delay       task start delay (in microseconds)
+ * @param   c               channel id
+ * @param   toggles         number of pin state changes
+ * @param   pin_setup_time  pin state setup_time (in nanoseconds)
+ * @param   pin_hold_time   pin state hold_time (in nanoseconds)
+ * @param   start_delay     task start delay (in nanoseconds)
  *
  * @retval  none
  */
-void pulsgen_task_setup(uint8_t c, uint32_t period, uint32_t toggles, uint8_t duty, uint32_t delay)
+void pulsgen_task_setup
+(
+    uint32_t c,
+    uint32_t toggles,
+    uint32_t pin_setup_time,
+    uint32_t pin_hold_time,
+    uint32_t start_delay
+)
 {
     struct pulsgen_msg_task_setup_t tx = *((struct pulsgen_msg_task_setup_t *) &msg_buf);
 
     tx.ch = c;
-    tx.period = period;
     tx.toggles = toggles;
-    tx.duty = duty;
-    tx.delay = delay;
+    tx.pin_setup_time = pin_setup_time;
+    tx.pin_hold_time = pin_hold_time;
+    tx.start_delay = start_delay;
 
     msg_send(PULSGEN_MSG_TASK_SETUP, (uint8_t*)&tx, 5*4, 0);
 }
@@ -799,7 +806,7 @@ int32_t parse_and_exec(const char *str)
          gpio_port_clear            (port, mask) \n\
 \n\
          pulsgen_pin_setup          (channel, port, pin, inverted) \n\
-         pulsgen_task_setup         (channel, period, toggles, duty, delay) \n\
+         pulsgen_task_setup         (channel, toggles, pin_hold_time, pin_hold_time, start_delay) \n\
          pulsgen_task_abort         (channel) \n\
     int  pulsgen_task_state         (channel) \n\
     int  pulsgen_task_toggles       (channel) \n\
@@ -813,22 +820,22 @@ int32_t parse_and_exec(const char *str)
 \n\
   Legend: \n\
 \n\
-    port        GPIO port (0..7, PA, PB, PC, PD, PE, PF, PG, PL)\n\
-    pin         GPIO pin (0..31)\n\
-    mask        GPIO pins mask (0b0 .. 0b11111111111111111111111111111111)\n\
+    port            GPIO port (0..7, PA, PB, PC, PD, PE, PF, PG, PL)\n\
+    pin             GPIO pin (0..31)\n\
+    mask            GPIO pins mask (0b0 .. 0b11111111111111111111111111111111)\n\
 \n\
-    channel     channel ID (0..31 for pulsgen_, 0-7 for encoder_)\n\
-    inverted    invert GPIO pin? (0..1)\n\
-    period      pulse period in microseconds (0..4294967295)\n\
-    toggles     number of pin state changes (0..4294967295, 0=infinite)\n\
-    duty        pulse duty cycle (0..100)\n\
-    delay       start delay in microseconds (0..4294967295)\n\
+    channel         channel ID (0..31 for pulsgen_, 0-7 for encoder_)\n\
+    inverted        invert GPIO pin? (0..1)\n\
+    toggles         number of pin state changes (0..4294967295, 0=infinite)\n\
+    pin_setup_time  pin state setup time in nanoseconds (0..4294967295)\n\
+    pin_hold_time   pin state hold time in nanoseconds (0..4294967295)\n\
+    start_delay     start delay in nanoseconds (0..4294967295)\n\
 \n\
-    phase       encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
-    using_B     use phase B? (0..1)\n\
-    using_Z     use phase Z? (0..1)\n\
-    state       channel state (0..1)\n\
-    counts      channel counts value (-2147483647 .. 2147483647)\n\
+    phase           encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
+    using_B         use phase B? (0..1)\n\
+    using_Z         use phase Z? (0..1)\n\
+    state           channel state (0..1)\n\
+    counts          channel counts value (-2147483647 .. 2147483647)\n\
 \n\
   NOTE:\n\
     If you are using stdin/stdout mode, omit `%s` and any \" brackets\n\
@@ -858,7 +865,7 @@ int32_t parse_and_exec(const char *str)
     %s \"pulsgen_pin_setup(0,PA,15,0)\" \n\
 \n\
     # make 100 pulses with 1Hz period and 50%% duty cycle \n\
-    %s \"pulsgen_task_setup(0,1000000,200,50,0)\" \n\
+    %s \"pulsgen_task_setup(0,200,500000000,500000000,0)\" \n\
 \n\
     %s \"pulsgen_task_state(0)\"            # get channel 0 state \n\
     %s \"pulsgen_task_toggles(0)\"          # get channel 0 toggles \n\
