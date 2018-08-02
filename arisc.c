@@ -806,7 +806,8 @@ int32_t parse_and_exec(const char *str)
          gpio_port_clear            (port, mask) \n\
 \n\
          pulsgen_pin_setup          (channel, port, pin, inverted) \n\
-         pulsgen_task_setup         (channel, toggles, pin_hold_time, pin_hold_time, start_delay) \n\
+         pulsgen_task_setup         (channel, toggles, \n\
+                                     pin_setup_time, pin_hold_time, start_delay) \n\
          pulsgen_task_abort         (channel) \n\
     int  pulsgen_task_state         (channel) \n\
     int  pulsgen_task_toggles       (channel) \n\
