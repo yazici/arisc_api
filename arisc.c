@@ -637,6 +637,9 @@ void mem_init(void)
        return;
     }
 
+    // no need to keep phy memory file open after mmap
+    close(mem_fd);
+
     // adjust offset to correct value
     vrt_block_addr += (vrt_offset/4);
 
