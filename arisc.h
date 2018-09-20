@@ -124,7 +124,7 @@ struct gpio_msg_state_t     { uint32_t state; };
 
 
 
-#define PULSGEN_CH_CNT      32  ///< maximum number of pulse generator channels
+#define PULSGEN_CH_CNT      64  ///< maximum number of pulse generator channels
 #define PULSGEN_MAX_DUTY    100 ///< maximum percent of pulse duty cycle (255 is max)
 #define PULSGEN_MAX_PERIOD  (UINT32_MAX/(TIMER_FREQUENCY/1000000))
 
