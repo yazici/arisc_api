@@ -29,6 +29,7 @@ void pulsgen_task_setup(uint32_t c, uint32_t toggles, uint32_t pin_setup_time,
 void pulsgen_task_abort(uint8_t c);
 uint8_t pulsgen_task_state(uint8_t c);
 uint32_t pulsgen_task_toggles(uint8_t c);
+void pulsgen_watchdog_setup(uint8_t enable, uint32_t time);
 
 void gpio_pin_setup_for_output(uint32_t port, uint32_t pin);
 void gpio_pin_setup_for_input(uint32_t port, uint32_t pin);
@@ -125,8 +126,6 @@ struct gpio_msg_state_t     { uint32_t state; };
 
 
 #define PULSGEN_CH_CNT      64  ///< maximum number of pulse generator channels
-#define PULSGEN_MAX_DUTY    100 ///< maximum percent of pulse duty cycle (255 is max)
-#define PULSGEN_MAX_PERIOD  (UINT32_MAX/(TIMER_FREQUENCY/1000000))
 
 /// messages types
 enum
@@ -135,7 +134,8 @@ enum
     PULSGEN_MSG_TASK_SETUP,
     PULSGEN_MSG_TASK_ABORT,
     PULSGEN_MSG_TASK_STATE,
-    PULSGEN_MSG_TASK_TOGGLES
+    PULSGEN_MSG_TASK_TOGGLES,
+    PULSGEN_MSG_WATCHDOG_SETUP
 };
 
 /// the message data sizes
@@ -148,6 +148,7 @@ struct pulsgen_msg_task_setup_t { uint32_t ch; uint32_t toggles;
 struct pulsgen_msg_ch_t { uint32_t ch; };
 struct pulsgen_msg_state_t { uint32_t state; };
 struct pulsgen_msg_toggles_t { uint32_t toggles; };
+struct pulsgen_msg_watchdog_setup_t { uint32_t enable; uint32_t time; };
 
 
 

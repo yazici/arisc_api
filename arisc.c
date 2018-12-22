@@ -332,6 +332,23 @@ uint32_t pulsgen_task_toggles(uint8_t c)
     return 0;
 }
 
+/**
+ * @brief   enable/disable `abort all` watchdog
+ * @param   enable      0 = disable watchdog, other values - enable watchdog
+ * @param   time        watchdog wait time (in nanoseconds)
+ * @retval  none
+ */
+void pulsgen_watchdog_setup(uint8_t enable, uint32_t time)
+{
+    struct pulsgen_msg_watchdog_setup_t tx =
+        *((struct pulsgen_msg_watchdog_setup_t *) &msg_buf);
+
+    tx.enable = enable;
+    tx.time = time;
+
+    msg_send(PULSGEN_MSG_WATCHDOG_SETUP, (uint8_t*)&tx, 2*4, 0);
+}
+
 
 
 
@@ -814,6 +831,7 @@ int32_t parse_and_exec(const char *str)
          pulsgen_task_abort         (channel) \n\
     int  pulsgen_task_state         (channel) \n\
     int  pulsgen_task_toggles       (channel) \n\
+         pulsgen_watchdog_setup     (enable, time) \n\
 \n\
          encoder_pin_setup          (channel, phase, port, pin) \n\
          encoder_setup              (channel, using_B, using_Z) \n\
@@ -834,6 +852,8 @@ int32_t parse_and_exec(const char *str)
     pin_setup_time  pin state setup time in nanoseconds (0..4294967295)\n\
     pin_hold_time   pin state hold time in nanoseconds (0..4294967295)\n\
     start_delay     start delay in nanoseconds (0..4294967295)\n\
+    enable          enable watchdog? (0..1)\n\
+    time            watchdog wait time in nanoseconds (0..4294967295)\n\
 \n\
     phase           encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
     using_B         use phase B? (0..1)\n\
@@ -875,6 +895,9 @@ int32_t parse_and_exec(const char *str)
     %s \"pulsgen_task_toggles(0)\"          # get channel 0 toggles \n\
     %s \"pulsgen_task_abort(0)\"            # stop channel 0 \n\
 \n\
+    # enable watchdog with 1 second timeout \n\
+    %s \"pulsgen_watchdog_setup(1,1000000000)\" \n\
+\n\
   ENCODER examples:\n\
 \n\
     %s \"encoder_pin_setup(0,PH_A,PA,3)\"   # use PA3 pin as phase A input \n\
@@ -890,7 +913,7 @@ int32_t parse_and_exec(const char *str)
 \n",
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
-            app_name, app_name, app_name, app_name, app_name, app_name
+            app_name, app_name, app_name, app_name, app_name, app_name, app_name
         );
         return 0;
     }
@@ -1021,6 +1044,15 @@ int32_t parse_and_exec(const char *str)
 #else
         printf("%u\n", 1);
 #endif
+        return 0;
+    }
+
+    if ( !reg_match(str, "pulsgen_watchdog_setup *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+#if !TEST
+        pulsgen_watchdog_setup(arg[0], arg[1]);
+#endif
+        printf("OK\n");
         return 0;
     }
 
