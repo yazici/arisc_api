@@ -268,15 +268,17 @@ void pulsgen_task_setup
 /**
  * @brief   abort current task for the selected channel
  * @param   c       channel id
+ * @param   when    0 = on pin state setup, !0 = on hold
  * @retval  none
  */
-void pulsgen_task_abort(uint8_t c)
+void pulsgen_task_abort(uint8_t c, uint8_t when)
 {
-    struct pulsgen_msg_ch_t tx = *((struct pulsgen_msg_ch_t *) &msg_buf);
+    struct pulsgen_msg_abort_t tx = *((struct pulsgen_msg_abort_t *) &msg_buf);
 
     tx.ch = c;
+    tx.when = when;
 
-    msg_send(PULSGEN_MSG_TASK_ABORT, (uint8_t*)&tx, 1*4, 0);
+    msg_send(PULSGEN_MSG_TASK_ABORT, (uint8_t*)&tx, 2*4, 0);
 }
 
 /**
@@ -828,7 +830,7 @@ int32_t parse_and_exec(const char *str)
          pulsgen_pin_setup          (channel, port, pin, inverted) \n\
          pulsgen_task_setup         (channel, toggles, \n\
                                      pin_setup_time, pin_hold_time, start_delay) \n\
-         pulsgen_task_abort         (channel) \n\
+         pulsgen_task_abort         (channel, when) \n\
     int  pulsgen_task_state         (channel) \n\
     int  pulsgen_task_toggles       (channel) \n\
          pulsgen_watchdog_setup     (enable, time) \n\
@@ -852,6 +854,7 @@ int32_t parse_and_exec(const char *str)
     pin_setup_time  pin state setup time in nanoseconds (0..4294967295)\n\
     pin_hold_time   pin state hold time in nanoseconds (0..4294967295)\n\
     start_delay     start delay in nanoseconds (0..4294967295)\n\
+    when            0 = on pin state setup, !0 = on hold\n\
     enable          enable watchdog? (0..1)\n\
     time            watchdog wait time in nanoseconds (0..4294967295)\n\
 \n\
@@ -893,7 +896,7 @@ int32_t parse_and_exec(const char *str)
 \n\
     %s \"pulsgen_task_state(0)\"            # get channel 0 state \n\
     %s \"pulsgen_task_toggles(0)\"          # get channel 0 toggles \n\
-    %s \"pulsgen_task_abort(0)\"            # stop channel 0 \n\
+    %s \"pulsgen_task_abort(0, 0)\"         # stop channel 0 on LOW pin state\n\
 \n\
     # enable watchdog with 1 second timeout \n\
     %s \"pulsgen_watchdog_setup(1,1000000000)\" \n\
@@ -1018,10 +1021,10 @@ int32_t parse_and_exec(const char *str)
         return 0;
     }
 
-    if ( !reg_match(str, "pulsgen_task_abort *\\("UINT"\\)", &arg[0], 1) )
+    if ( !reg_match(str, "pulsgen_task_abort *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
 #if !TEST
-        pulsgen_task_abort(arg[0]);
+        pulsgen_task_abort(arg[0], arg[1]);
 #endif
         printf("OK\n");
         return 0;
