@@ -282,7 +282,6 @@ void stepgen_abort(uint8_t c)
 int32_t stepgen_pos_get(uint8_t c)
 {
     u32_10_t *tx = (u32_10_t*) msg_buf;
-    u32_10_t *rx = (u32_10_t*) msg_buf;
 
     tx->v[0] = c;
 
@@ -293,7 +292,7 @@ int32_t stepgen_pos_get(uint8_t c)
     for ( n = 999999; n--; )
     {
         if ( msg_read(STEPGEN_MSG_POS_GET, msg_buf, 0) < 0 ) continue;
-        else return (int32_t)rx->v[0];
+        else return (int32_t)tx->v[0];
     }
 
     return 0;
@@ -312,7 +311,7 @@ void stepgen_pos_set(uint8_t c, int32_t pos)
     tx->v[0] = c;
     tx->v[1] = (uint32_t)pos;
 
-    msg_send(STEPGEN_MSG_POS_GET, msg_buf, 2*4, 0);
+    msg_send(STEPGEN_MSG_POS_SET, msg_buf, 2*4, 0);
 }
 
 
@@ -993,7 +992,7 @@ int32_t parse_and_exec(const char *str)
 #if !TEST
         printf("%d\n", stepgen_pos_get(arg[0]));
 #else
-        printf("%u\n", 1);
+        printf("%d\n", 1);
 #endif
         return 0;
     }
@@ -1001,7 +1000,7 @@ int32_t parse_and_exec(const char *str)
     if ( !reg_match(str, "stepgen_pos_set *\\("UINT","INT"\\)", &arg[0], 2) )
     {
 #if !TEST
-        stepgen_pos_set(arg[0], (int32_t)arg[0]);
+        stepgen_pos_set(arg[0], (int32_t)arg[1]);
 #endif
         printf("OK\n");
         return 0;
