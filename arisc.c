@@ -815,7 +815,7 @@ int32_t parse_and_exec(const char *str)
          gpio_port_clear            (port, mask) \n\
 \n\
          stepgen_pin_setup      (channel, type, port, pin, invert) \n\
-         stepgen_task_add       (channel, type, toggles, low_time, high_time) \n\
+         stepgen_task_add       (channel, type, pulses, low_time, high_time) \n\
          stepgen_abort          (channel) \n\
     int  stepgen_pos_get        (channel) \n\
          stepgen_pos_set        (channel, position) \n\
@@ -837,7 +837,7 @@ int32_t parse_and_exec(const char *str)
     channel         channel ID (0..24 for stepgen, 0-7 for encoder)\n\
     type            0 = STEP, 1 = DIR\n\
     invert          invert GPIO pin? (0..1)\n\
-    toggles         number of pin state changes (0..4294967295, 0=infinite)\n\
+    pulses          number of pin pulses (0..4294967295)\n\
     low_time        pin state setup time in nanoseconds (0..4294967295)\n\
     high_time       pin state hold time in nanoseconds (0..4294967295)\n\
     position        position value in pulses (integer 4 bytes)\n\
@@ -876,7 +876,7 @@ int32_t parse_and_exec(const char *str)
     %s \"stepgen_pin_setup(0,0,PA,15,0)\" \n\
 \n\
     # make 100 pulses with 1Hz period and 50%% duty cycle \n\
-    %s \"stepgen_task_add(0,0,200,500000000,500000000)\" \n\
+    %s \"stepgen_task_add(0,0,100,500000000,500000000)\" \n\
 \n\
     %s \"stepgen_tasks_left(0)\"            # get number of tasks left to do \n\
     %s \"stepgen_pos_set(0,777)\"           # set channel 0 position to 777 \n\
