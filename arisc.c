@@ -852,7 +852,7 @@ int32_t parse_and_exec(const char *str)
     %s \"stepgen_pin_setup(0,0,PA,15,0)\" \n\
 \n\
     # make 100 pulses with 1Hz period and 50%% duty cycle \n\
-    %s \"stepgen_task_add(0,0,200,500000000,500000000,0)\" \n\
+    %s \"stepgen_task_add(0,0,200,500000000,500000000)\" \n\
 \n\
     %s \"stepgen_pos_set(0,777)\"           # set channel 0 position to 777 \n\
     %s \"stepgen_pos_get(0)\"               # get channel 0 position \n\
