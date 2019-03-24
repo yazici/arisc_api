@@ -215,140 +215,104 @@ int32_t encoder_counts_get(uint8_t c)
 /**
  * @brief   setup GPIO pin for the selected channel
  *
- * @param   c           channel id
- * @param   port        GPIO port number
- * @param   pin         GPIO pin number
- * @param   inverted    invert pin state?
+ * @param   c               channel id
+ * @param   type            0:step, 1:dir
+ * @param   port            GPIO port number
+ * @param   pin             GPIO pin number
+ * @param   invert          invert pin state?
  *
  * @retval  none
  */
-void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted)
+void stepgen_pin_setup(uint8_t c, uint8_t type, uint8_t port, uint8_t pin, uint8_t invert)
 {
-    struct pulsgen_msg_pin_setup_t tx = *((struct pulsgen_msg_pin_setup_t *) &msg_buf);
+    u32_10_t *tx = (u32_10_t*) msg_buf;
 
-    tx.ch = c;
-    tx.port = port;
-    tx.pin = pin;
-    tx.inverted = inverted;
+    tx->v[0] = c;
+    tx->v[1] = type;
+    tx->v[2] = port;
+    tx->v[3] = pin;
+    tx->v[4] = invert;
 
-    msg_send(PULSGEN_MSG_PIN_SETUP, (uint8_t*)&tx, 4*4, 0);
+    msg_send(STEPGEN_MSG_PIN_SETUP, msg_buf, 5*4, 0);
 }
 
 /**
- * @brief   setup a new task for the selected channel
+ * @brief   add a new task for the selected channel
  *
  * @param   c               channel id
+ * @param   type            0:step, 1:dir
  * @param   toggles         number of pin state changes
- * @param   pin_setup_time  pin state setup_time (in nanoseconds)
- * @param   pin_hold_time   pin state hold_time (in nanoseconds)
- * @param   start_delay     task start delay (in nanoseconds)
+ * @param   pin_low_time    pin LOW state duration (in nanoseconds)
+ * @param   pin_high_time   pin HIGH state duration (in nanoseconds)
  *
  * @retval  none
  */
-void pulsgen_task_setup
-(
-    uint32_t c,
-    uint32_t toggles,
-    uint32_t pin_setup_time,
-    uint32_t pin_hold_time,
-    uint32_t start_delay
-)
+void stepgen_task_add(uint8_t c, uint8_t type, uint32_t toggles, uint32_t pin_low_time, uint32_t pin_high_time)
 {
-    struct pulsgen_msg_task_setup_t tx = *((struct pulsgen_msg_task_setup_t *) &msg_buf);
+    u32_10_t *tx = (u32_10_t*) msg_buf;
 
-    tx.ch = c;
-    tx.toggles = toggles;
-    tx.pin_setup_time = pin_setup_time;
-    tx.pin_hold_time = pin_hold_time;
-    tx.start_delay = start_delay;
+    tx->v[0] = c;
+    tx->v[1] = type;
+    tx->v[2] = toggles;
+    tx->v[3] = pin_low_time;
+    tx->v[4] = pin_high_time;
 
-    msg_send(PULSGEN_MSG_TASK_SETUP, (uint8_t*)&tx, 5*4, 0);
+    msg_send(STEPGEN_MSG_TASK_ADD, msg_buf, 5*4, 0);
 }
 
 /**
- * @brief   abort current task for the selected channel
+ * @brief   abort all tasks for the selected channel
+ * @param   c   channel id
+ * @retval  none
+ */
+void stepgen_abort(uint8_t c)
+{
+    u32_10_t *tx = (u32_10_t*) msg_buf;
+
+    tx->v[0] = c;
+
+    msg_send(STEPGEN_MSG_ABORT, msg_buf, 1*4, 0);
+}
+
+/**
+ * @brief   set channel steps position
+ * @param   c   channel id
+ * @retval  integer 4-bytes
+ */
+int32_t stepgen_pos_get(uint8_t c)
+{
+    u32_10_t *tx = (u32_10_t*) msg_buf;
+    u32_10_t *rx = (u32_10_t*) msg_buf;
+
+    tx->v[0] = c;
+
+    msg_send(STEPGEN_MSG_POS_GET, msg_buf, 1*4, 0);
+
+    // finite loop, only 999999 tries to read an answer
+    uint32_t n = 0;
+    for ( n = 999999; n--; )
+    {
+        if ( msg_read(STEPGEN_MSG_POS_GET, msg_buf, 0) < 0 ) continue;
+        else return (int32_t)rx->v[0];
+    }
+
+    return 0;
+}
+
+/**
+ * @brief   set channel steps position
  * @param   c       channel id
- * @param   when    0 = on pin state setup, !0 = on hold
+ * @param   pos     integer 4-bytes
  * @retval  none
  */
-void pulsgen_task_abort(uint8_t c, uint8_t when)
+void stepgen_pos_set(uint8_t c, int32_t pos)
 {
-    struct pulsgen_msg_abort_t tx = *((struct pulsgen_msg_abort_t *) &msg_buf);
+    u32_10_t *tx = (u32_10_t*) msg_buf;
 
-    tx.ch = c;
-    tx.when = when;
+    tx->v[0] = c;
+    tx->v[1] = (uint32_t)pos;
 
-    msg_send(PULSGEN_MSG_TASK_ABORT, (uint8_t*)&tx, 2*4, 0);
-}
-
-/**
- * @brief   get current task state for the selected channel
- *
- * @param   c   channel id
- *
- * @retval  0   (channel have no task)
- * @retval  1   (channel have a task)
- */
-uint8_t pulsgen_task_state(uint8_t c)
-{
-    struct pulsgen_msg_ch_t tx = *((struct pulsgen_msg_ch_t *) &msg_buf);
-    struct pulsgen_msg_state_t rx = *((struct pulsgen_msg_state_t *) &msg_buf);
-
-    tx.ch = c;
-
-    msg_send(PULSGEN_MSG_TASK_STATE, (uint8_t*)&tx, 1*4, 0);
-
-    // finite loop, only 999999 tries to read an answer
-    uint32_t n = 0;
-    for ( n = 999999; n--; )
-    {
-        if ( msg_read(PULSGEN_MSG_TASK_STATE, (uint8_t*)&rx, 0) < 0 ) continue;
-        else return rx.state;
-    }
-
-    return 0;
-}
-
-/**
- * @brief   get current pin state changes since task start
- * @param   c   channel id
- * @retval  0..0xFFFFFFFF
- */
-uint32_t pulsgen_task_toggles(uint8_t c)
-{
-    struct pulsgen_msg_ch_t tx = *((struct pulsgen_msg_ch_t *) &msg_buf);
-    struct pulsgen_msg_toggles_t rx = *((struct pulsgen_msg_toggles_t *) &msg_buf);
-
-    tx.ch = c;
-
-    msg_send(PULSGEN_MSG_TASK_TOGGLES, (uint8_t*)&tx, 1*4, 0);
-
-    // finite loop, only 999999 tries to read an answer
-    uint32_t n = 0;
-    for ( n = 999999; n--; )
-    {
-        if ( msg_read(PULSGEN_MSG_TASK_TOGGLES, (uint8_t*)&rx, 0) < 0 ) continue;
-        else return rx.toggles;
-    }
-
-    return 0;
-}
-
-/**
- * @brief   enable/disable `abort all` watchdog
- * @param   enable      0 = disable watchdog, other values - enable watchdog
- * @param   time        watchdog wait time (in nanoseconds)
- * @retval  none
- */
-void pulsgen_watchdog_setup(uint8_t enable, uint32_t time)
-{
-    struct pulsgen_msg_watchdog_setup_t tx =
-        *((struct pulsgen_msg_watchdog_setup_t *) &msg_buf);
-
-    tx.enable = enable;
-    tx.time = time;
-
-    msg_send(PULSGEN_MSG_WATCHDOG_SETUP, (uint8_t*)&tx, 2*4, 0);
+    msg_send(STEPGEN_MSG_POS_GET, msg_buf, 2*4, 0);
 }
 
 
@@ -827,20 +791,18 @@ int32_t parse_and_exec(const char *str)
          gpio_port_set              (port, mask) \n\
          gpio_port_clear            (port, mask) \n\
 \n\
-         pulsgen_pin_setup          (channel, port, pin, inverted) \n\
-         pulsgen_task_setup         (channel, toggles, \n\
-                                     pin_setup_time, pin_hold_time, start_delay) \n\
-         pulsgen_task_abort         (channel, when) \n\
-    int  pulsgen_task_state         (channel) \n\
-    int  pulsgen_task_toggles       (channel) \n\
-         pulsgen_watchdog_setup     (enable, time) \n\
+         stepgen_pin_setup      (channel, type, port, pin, invert) \n\
+         stepgen_task_add       (channel, type, toggles, low_time, high_time) \n\
+         stepgen_abort          (channel) \n\
+    int  stepgen_pos_get        (channel) \n\
+         stepgen_pos_set        (channel, position) \n\
 \n\
-         encoder_pin_setup          (channel, phase, port, pin) \n\
-         encoder_setup              (channel, using_B, using_Z) \n\
-         encoder_state_set          (channel, state) \n\
-         encoder_counts_set         (channel, counts) \n\
-    int  encoder_state_get          (channel) \n\
-    int  encoder_counts_get         (channel) \n\
+         encoder_pin_setup      (channel, phase, port, pin) \n\
+         encoder_setup          (channel, using_B, using_Z) \n\
+         encoder_state_set      (channel, state) \n\
+         encoder_counts_set     (channel, counts) \n\
+    int  encoder_state_get      (channel) \n\
+    int  encoder_counts_get     (channel) \n\
 \n\
   Legend: \n\
 \n\
@@ -848,15 +810,13 @@ int32_t parse_and_exec(const char *str)
     pin             GPIO pin (0..31)\n\
     mask            GPIO pins mask (0b0 .. 0b11111111111111111111111111111111)\n\
 \n\
-    channel         channel ID (0..31 for pulsgen_, 0-7 for encoder_)\n\
-    inverted        invert GPIO pin? (0..1)\n\
+    channel         channel ID (0..24 for stepgen, 0-7 for encoder)\n\
+    type            0 = STEP, 1 = DIR\n\
+    invert          invert GPIO pin? (0..1)\n\
     toggles         number of pin state changes (0..4294967295, 0=infinite)\n\
-    pin_setup_time  pin state setup time in nanoseconds (0..4294967295)\n\
-    pin_hold_time   pin state hold time in nanoseconds (0..4294967295)\n\
-    start_delay     start delay in nanoseconds (0..4294967295)\n\
-    when            0 = on pin state setup, !0 = on hold\n\
-    enable          enable watchdog? (0..1)\n\
-    time            watchdog wait time in nanoseconds (0..4294967295)\n\
+    low_time        pin state setup time in nanoseconds (0..4294967295)\n\
+    high_time       pin state hold time in nanoseconds (0..4294967295)\n\
+    position        position value in pulses (integer 4 bytes)\n\
 \n\
     phase           encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
     using_B         use phase B? (0..1)\n\
@@ -886,20 +846,17 @@ int32_t parse_and_exec(const char *str)
     %s \"gpio_port_set(PA, 0b1011)\"        # set PA0,PA1,PA3 state to 1 \n\
     %s \"gpio_port_get(PA)\"                # get PA port all pins state \n\
 \n\
-  PULSGEN examples:\n\
+  STEPGEN examples:\n\
 \n\
     # use PA15 pin for the channel 0 output \n\
-    %s \"pulsgen_pin_setup(0,PA,15,0)\" \n\
+    %s \"stepgen_pin_setup(0,0,PA,15,0)\" \n\
 \n\
     # make 100 pulses with 1Hz period and 50%% duty cycle \n\
-    %s \"pulsgen_task_setup(0,200,500000000,500000000,0)\" \n\
+    %s \"stepgen_task_add(0,0,200,500000000,500000000,0)\" \n\
 \n\
-    %s \"pulsgen_task_state(0)\"            # get channel 0 state \n\
-    %s \"pulsgen_task_toggles(0)\"          # get channel 0 toggles \n\
-    %s \"pulsgen_task_abort(0, 0)\"         # stop channel 0 on LOW pin state\n\
-\n\
-    # enable watchdog with 1 second timeout \n\
-    %s \"pulsgen_watchdog_setup(1,1000000000)\" \n\
+    %s \"stepgen_pos_set(0,777)\"           # set channel 0 position to 777 \n\
+    %s \"stepgen_pos_get(0)\"               # get channel 0 position \n\
+    %s \"stepgen_abort(0)\"                 # stop channel 0 on LOW pin state\n\
 \n\
   ENCODER examples:\n\
 \n\
@@ -915,8 +872,9 @@ int32_t parse_and_exec(const char *str)
     If you are using stdin/stdout mode, omit `%s` and any \" brackets\n\
 \n",
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
+            app_name, app_name, app_name, app_name, app_name,
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
-            app_name, app_name, app_name, app_name, app_name, app_name, app_name
+            app_name
         );
         return 0;
     }
@@ -1001,59 +959,49 @@ int32_t parse_and_exec(const char *str)
         return 0;
     }
 
-    // --- PULSGEN ------
+    // --- STEPGEN ------
 
-    if ( !reg_match(str, "pulsgen_pin_setup *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
+    if ( !reg_match(str, "stepgen_pin_setup *\\("UINT","UINT","UINT","UINT","UINT"\\)", &arg[0], 5) )
     {
 #if !TEST
-        pulsgen_pin_setup(arg[0], arg[1], arg[2], arg[3]);
+        stepgen_pin_setup(arg[0], arg[1], arg[2], arg[3], arg[4]);
 #endif
         printf("OK\n");
         return 0;
     }
 
-    if ( !reg_match(str, "pulsgen_task_setup *\\("UINT","UINT","UINT","UINT","UINT"\\)", &arg[0], 5) )
+    if ( !reg_match(str, "stepgen_task_add *\\("UINT","UINT","UINT","UINT","UINT"\\)", &arg[0], 5) )
     {
 #if !TEST
-        pulsgen_task_setup(arg[0], arg[1], arg[2], arg[3], arg[4]);
+        stepgen_task_add(arg[0], arg[1], arg[2], arg[3], arg[4]);
 #endif
         printf("OK\n");
         return 0;
     }
 
-    if ( !reg_match(str, "pulsgen_task_abort *\\("UINT","UINT"\\)", &arg[0], 2) )
+    if ( !reg_match(str, "stepgen_abort *\\("UINT"\\)", &arg[0], 1) )
     {
 #if !TEST
-        pulsgen_task_abort(arg[0], arg[1]);
+        stepgen_abort(arg[0]);
 #endif
         printf("OK\n");
         return 0;
     }
 
-    if ( !reg_match(str, "pulsgen_task_state *\\("UINT"\\)", &arg[0], 1) )
+    if ( !reg_match(str, "stepgen_pos_get *\\("UINT"\\)", &arg[0], 1) )
     {
 #if !TEST
-        printf("%u\n", pulsgen_task_state(arg[0]));
+        printf("%d\n", stepgen_pos_get(arg[0]));
 #else
         printf("%u\n", 1);
 #endif
         return 0;
     }
 
-    if ( !reg_match(str, "pulsgen_task_toggles *\\("UINT"\\)", &arg[0], 1) )
+    if ( !reg_match(str, "stepgen_pos_set *\\("UINT","INT"\\)", &arg[0], 2) )
     {
 #if !TEST
-        printf("%u\n", pulsgen_task_toggles(arg[0]));
-#else
-        printf("%u\n", 1);
-#endif
-        return 0;
-    }
-
-    if ( !reg_match(str, "pulsgen_watchdog_setup *\\("UINT","UINT"\\)", &arg[0], 2) )
-    {
-#if !TEST
-        pulsgen_watchdog_setup(arg[0], arg[1]);
+        stepgen_pos_set(arg[0], (int32_t)arg[0]);
 #endif
         printf("OK\n");
         return 0;

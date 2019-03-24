@@ -23,13 +23,11 @@ void encoder_counts_set(uint8_t c, int32_t counts);
 uint8_t encoder_state_get(uint8_t c);
 int32_t encoder_counts_get(uint8_t c);
 
-void pulsgen_pin_setup(uint8_t c, uint8_t port, uint8_t pin, uint8_t inverted);
-void pulsgen_task_setup(uint32_t c, uint32_t toggles, uint32_t pin_setup_time,
-    uint32_t pin_hold_time, uint32_t start_delay);
-void pulsgen_task_abort(uint8_t c, uint8_t when);
-uint8_t pulsgen_task_state(uint8_t c);
-uint32_t pulsgen_task_toggles(uint8_t c);
-void pulsgen_watchdog_setup(uint8_t enable, uint32_t time);
+void stepgen_pin_setup(uint8_t c, uint8_t type, uint8_t port, uint8_t pin, uint8_t invert);
+void stepgen_task_add(uint8_t c, uint8_t type, uint32_t toggles, uint32_t pin_low_time, uint32_t pin_high_time);
+void stepgen_abort(uint8_t c);
+int32_t stepgen_pos_get(uint8_t c);
+void stepgen_pos_set(uint8_t c, int32_t pos);
 
 void gpio_pin_setup_for_output(uint32_t port, uint32_t pin);
 void gpio_pin_setup_for_input(uint32_t port, uint32_t pin);
@@ -48,7 +46,6 @@ void mem_deinit(void);
 
 int32_t reg_match(const char *source, const char *pattern, uint32_t *match_array, uint32_t array_size);
 int32_t parse_and_exec(const char *str);
-
 
 
 
@@ -86,6 +83,8 @@ struct msg_t
 };
 #pragma pack(pop)
 
+typedef struct { uint32_t v[10]; } u32_10_t;
+
 
 
 
@@ -113,9 +112,6 @@ enum
     GPIO_MSG_PORT_CLEAR
 };
 
-/// the message data sizes
-#define GPIO_MSG_BUF_LEN MSG_LEN
-
 /// the message data access
 struct gpio_msg_port_t      { uint32_t port; };
 struct gpio_msg_port_pin_t  { uint32_t port; uint32_t pin;  };
@@ -125,31 +121,17 @@ struct gpio_msg_state_t     { uint32_t state; };
 
 
 
-#define PULSGEN_CH_CNT      64  ///< maximum number of pulse generator channels
+#define STEPGEN_CH_CNT          24  ///< maximum number of pulse generator channels
 
-/// messages types
 enum
 {
-    PULSGEN_MSG_PIN_SETUP = 0x20,
-    PULSGEN_MSG_TASK_SETUP,
-    PULSGEN_MSG_TASK_ABORT,
-    PULSGEN_MSG_TASK_STATE,
-    PULSGEN_MSG_TASK_TOGGLES,
-    PULSGEN_MSG_WATCHDOG_SETUP
+    STEPGEN_MSG_PIN_SETUP = 0x20,
+    STEPGEN_MSG_TASK_ADD,
+    STEPGEN_MSG_ABORT,
+    STEPGEN_MSG_POS_GET,
+    STEPGEN_MSG_POS_SET,
+    STEPGEN_MSG_CNT
 };
-
-/// the message data sizes
-#define PULSGEN_MSG_BUF_LEN MSG_LEN
-
-/// the message data access
-struct pulsgen_msg_pin_setup_t { uint32_t ch; uint32_t port; uint32_t pin; uint32_t inverted; };
-struct pulsgen_msg_task_setup_t { uint32_t ch; uint32_t toggles;
-    uint32_t pin_setup_time; uint32_t pin_hold_time; uint32_t start_delay; };
-struct pulsgen_msg_ch_t { uint32_t ch; };
-struct pulsgen_msg_abort_t { uint32_t ch; uint32_t when; };
-struct pulsgen_msg_state_t { uint32_t state; };
-struct pulsgen_msg_toggles_t { uint32_t toggles; };
-struct pulsgen_msg_watchdog_setup_t { uint32_t enable; uint32_t time; };
 
 
 
@@ -170,9 +152,6 @@ enum
     ENCODER_MSG_COUNTS_GET
 };
 
-/// the message data sizes
-#define ENCODER_MSG_BUF_LEN MSG_LEN
-
 /// the message data access
 struct encoder_msg_ch_t { uint32_t ch; };
 struct encoder_msg_pin_setup_t { uint32_t ch; uint32_t phase; uint32_t port; uint32_t pin; };
@@ -181,6 +160,7 @@ struct encoder_msg_state_set_t { uint32_t ch; uint32_t state; };
 struct encoder_msg_counts_set_t { uint32_t ch; int32_t counts; };
 struct encoder_msg_state_get_t { uint32_t state; };
 struct encoder_msg_counts_get_t { int32_t counts; };
+
 
 
 
