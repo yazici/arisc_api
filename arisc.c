@@ -241,19 +241,19 @@ void stepgen_pin_setup(uint8_t c, uint8_t type, uint8_t port, uint8_t pin, uint8
  *
  * @param   c               channel id
  * @param   type            0:step, 1:dir
- * @param   toggles         number of pin state changes
+ * @param   pulses          number of pulses (ignored for DIR task)
  * @param   pin_low_time    pin LOW state duration (in nanoseconds)
  * @param   pin_high_time   pin HIGH state duration (in nanoseconds)
  *
  * @retval  none
  */
-void stepgen_task_add(uint8_t c, uint8_t type, uint32_t toggles, uint32_t pin_low_time, uint32_t pin_high_time)
+void stepgen_task_add(uint8_t c, uint8_t type, uint32_t pulses, uint32_t pin_low_time, uint32_t pin_high_time)
 {
     u32_10_t *tx = (u32_10_t*) msg_buf;
 
     tx->v[0] = c;
     tx->v[1] = type;
-    tx->v[2] = toggles;
+    tx->v[2] = pulses;
     tx->v[3] = pin_low_time;
     tx->v[4] = pin_high_time;
 
