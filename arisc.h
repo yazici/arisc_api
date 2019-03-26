@@ -25,7 +25,7 @@ int32_t encoder_counts_get(uint8_t c);
 
 void stepgen_pin_setup(uint8_t c, uint8_t type, uint8_t port, uint8_t pin, uint8_t invert);
 void stepgen_task_add(uint8_t c, uint8_t type, uint32_t pulses, uint32_t pin_low_time, uint32_t pin_high_time);
-void stepgen_abort(uint8_t c);
+void stepgen_abort(uint8_t c, uint8_t all);
 int32_t stepgen_pos_get(uint8_t c);
 void stepgen_pos_set(uint8_t c, int32_t pos);
 uint8_t stepgen_tasks_left(uint8_t c);

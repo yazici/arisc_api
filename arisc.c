@@ -262,16 +262,18 @@ void stepgen_task_add(uint8_t c, uint8_t type, uint32_t pulses, uint32_t pin_low
 
 /**
  * @brief   abort all tasks for the selected channel
- * @param   c   channel id
+ * @param   c       channel id
+ * @param   all     abort all task?
  * @retval  none
  */
-void stepgen_abort(uint8_t c)
+void stepgen_abort(uint8_t c, uint8_t all)
 {
     u32_10_t *tx = (u32_10_t*) msg_buf;
 
     tx->v[0] = c;
+    tx->v[1] = all;
 
-    msg_send(STEPGEN_MSG_ABORT, msg_buf, 1*4, 0);
+    msg_send(STEPGEN_MSG_ABORT, msg_buf, 2*4, 0);
 }
 
 /**
@@ -816,7 +818,7 @@ int32_t parse_and_exec(const char *str)
 \n\
          stepgen_pin_setup      (channel, type, port, pin, invert) \n\
          stepgen_task_add       (channel, type, pulses, low_time, high_time) \n\
-         stepgen_abort          (channel) \n\
+         stepgen_abort          (channel, all) \n\
     int  stepgen_pos_get        (channel) \n\
          stepgen_pos_set        (channel, position) \n\
     int  stepgen_tasks_left     (channel) \n\
@@ -840,6 +842,7 @@ int32_t parse_and_exec(const char *str)
     pulses          number of pin pulses (0..4294967295)\n\
     low_time        pin state setup time in nanoseconds (0..4294967295)\n\
     high_time       pin state hold time in nanoseconds (0..4294967295)\n\
+    all             0 = abort current task, !0 = abort all tasks\n\
     position        position value in pulses (integer 4 bytes)\n\
 \n\
     phase           encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
@@ -881,7 +884,7 @@ int32_t parse_and_exec(const char *str)
     %s \"stepgen_tasks_left(0)\"            # get number of tasks left to do \n\
     %s \"stepgen_pos_set(0,777)\"           # set channel 0 position to 777 \n\
     %s \"stepgen_pos_get(0)\"               # get channel 0 position \n\
-    %s \"stepgen_abort(0)\"                 # stop channel 0 on LOW pin state\n\
+    %s \"stepgen_abort(0,1)\"               # stop channel 0 on LOW pin state\n\
 \n\
   ENCODER examples:\n\
 \n\
@@ -1004,10 +1007,10 @@ int32_t parse_and_exec(const char *str)
         return 0;
     }
 
-    if ( !reg_match(str, "stepgen_abort *\\("UINT"\\)", &arg[0], 1) )
+    if ( !reg_match(str, "stepgen_abort *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
 #if !TEST
-        stepgen_abort(arg[0]);
+        stepgen_abort(arg[0], arg[1]);
 #endif
         printf("OK\n");
         return 0;
