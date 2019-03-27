@@ -25,10 +25,10 @@ int32_t encoder_counts_get(uint8_t c);
 
 void stepgen_pin_setup(uint8_t c, uint8_t type, uint8_t port, uint8_t pin, uint8_t invert);
 void stepgen_task_add(uint8_t c, uint8_t type, uint32_t pulses, uint32_t pin_low_time, uint32_t pin_high_time);
+void stepgen_task_update(uint8_t c, uint8_t type, uint32_t pin_low_time, uint32_t pin_high_time);
 void stepgen_abort(uint8_t c, uint8_t all);
 int32_t stepgen_pos_get(uint8_t c);
 void stepgen_pos_set(uint8_t c, int32_t pos);
-uint8_t stepgen_tasks_left(uint8_t c);
 
 void gpio_pin_setup_for_output(uint32_t port, uint32_t pin);
 void gpio_pin_setup_for_input(uint32_t port, uint32_t pin);
@@ -128,10 +128,10 @@ enum
 {
     STEPGEN_MSG_PIN_SETUP = 0x20,
     STEPGEN_MSG_TASK_ADD,
+    STEPGEN_MSG_TASK_UPDATE,
     STEPGEN_MSG_ABORT,
     STEPGEN_MSG_POS_GET,
     STEPGEN_MSG_POS_SET,
-    STEPGEN_MSG_TASKS_LEFT,
     STEPGEN_MSG_CNT
 };
 

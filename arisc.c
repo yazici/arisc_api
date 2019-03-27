@@ -261,6 +261,28 @@ void stepgen_task_add(uint8_t c, uint8_t type, uint32_t pulses, uint32_t pin_low
 }
 
 /**
+ * @brief   update time values for the current task
+ *
+ * @param   c               channel id
+ * @param   type            0:step, 1:dir
+ * @param   pin_low_time    pin LOW state duration (in nanoseconds)
+ * @param   pin_high_time   pin HIGH state duration (in nanoseconds)
+ *
+ * @retval  none
+ */
+void stepgen_task_update(uint8_t c, uint8_t type, uint32_t pin_low_time, uint32_t pin_high_time)
+{
+    u32_10_t *tx = (u32_10_t*) msg_buf;
+
+    tx->v[0] = c;
+    tx->v[1] = type;
+    tx->v[2] = pin_low_time;
+    tx->v[3] = pin_high_time;
+
+    msg_send(STEPGEN_MSG_TASK_UPDATE, msg_buf, 4*4, 0);
+}
+
+/**
  * @brief   abort all tasks for the selected channel
  * @param   c       channel id
  * @param   all     abort all task?
@@ -314,30 +336,6 @@ void stepgen_pos_set(uint8_t c, int32_t pos)
     tx->v[1] = (uint32_t)pos;
 
     msg_send(STEPGEN_MSG_POS_SET, msg_buf, 2*4, 0);
-}
-
-/**
- * @brief   task count left to do
- * @param   c           channel id
- * @retval  uint8_t     task count left to do (including current task)
- */
-uint8_t stepgen_tasks_left(uint8_t c)
-{
-    u32_10_t *tx = (u32_10_t*) msg_buf;
-
-    tx->v[0] = c;
-
-    msg_send(STEPGEN_MSG_TASKS_LEFT, msg_buf, 1*4, 0);
-
-    // finite loop, only 999999 tries to read an answer
-    uint32_t n = 0;
-    for ( n = 999999; n--; )
-    {
-        if ( msg_read(STEPGEN_MSG_TASKS_LEFT, msg_buf, 0) < 0 ) continue;
-        else return (uint8_t)tx->v[0];
-    }
-
-    return 0;
 }
 
 
@@ -818,10 +816,10 @@ int32_t parse_and_exec(const char *str)
 \n\
          stepgen_pin_setup      (channel, type, port, pin, invert) \n\
          stepgen_task_add       (channel, type, pulses, low_time, high_time) \n\
+         stepgen_task_update    (channel, type, low_time, high_time) \n\
          stepgen_abort          (channel, all) \n\
     int  stepgen_pos_get        (channel) \n\
          stepgen_pos_set        (channel, position) \n\
-    int  stepgen_tasks_left     (channel) \n\
 \n\
          encoder_pin_setup      (channel, phase, port, pin) \n\
          encoder_setup          (channel, using_B, using_Z) \n\
@@ -881,7 +879,9 @@ int32_t parse_and_exec(const char *str)
     # make 100 pulses with 1Hz period and 50%% duty cycle \n\
     %s \"stepgen_task_add(0,0,100,500000000,500000000)\" \n\
 \n\
-    %s \"stepgen_tasks_left(0)\"            # get number of tasks left to do \n\
+    # change task period to 100Hz \n\
+    %s \"stepgen_task_update(0,0,5000000,5000000)\" \n\
+\n\
     %s \"stepgen_pos_set(0,777)\"           # set channel 0 position to 777 \n\
     %s \"stepgen_pos_get(0)\"               # get channel 0 position \n\
     %s \"stepgen_abort(0,1)\"               # stop channel 0 on LOW pin state\n\
@@ -1007,6 +1007,15 @@ int32_t parse_and_exec(const char *str)
         return 0;
     }
 
+    if ( !reg_match(str, "stepgen_task_update *\\("UINT","UINT","UINT","UINT"\\)", &arg[0], 4) )
+    {
+#if !TEST
+        stepgen_task_update(arg[0], arg[1], arg[2], arg[3]);
+#endif
+        printf("OK\n");
+        return 0;
+    }
+
     if ( !reg_match(str, "stepgen_abort *\\("UINT","UINT"\\)", &arg[0], 2) )
     {
 #if !TEST
@@ -1032,16 +1041,6 @@ int32_t parse_and_exec(const char *str)
         stepgen_pos_set(arg[0], (int32_t)arg[1]);
 #endif
         printf("OK\n");
-        return 0;
-    }
-
-    if ( !reg_match(str, "stepgen_tasks_left *\\("UINT"\\)", &arg[0], 1) )
-    {
-#if !TEST
-        printf("%u\n", stepgen_tasks_left(arg[0]));
-#else
-        printf("%u\n", 0);
-#endif
         return 0;
     }
 
