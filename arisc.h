@@ -29,6 +29,7 @@ void stepgen_task_update(uint8_t c, uint8_t type, uint32_t pin_low_time, uint32_
 void stepgen_abort(uint8_t c, uint8_t all);
 int32_t stepgen_pos_get(uint8_t c);
 void stepgen_pos_set(uint8_t c, int32_t pos);
+void stepgen_watchdog_setup(uint8_t enable, uint32_t time);
 
 void gpio_pin_setup_for_output(uint32_t port, uint32_t pin);
 void gpio_pin_setup_for_input(uint32_t port, uint32_t pin);
@@ -132,6 +133,7 @@ enum
     STEPGEN_MSG_ABORT,
     STEPGEN_MSG_POS_GET,
     STEPGEN_MSG_POS_SET,
+    STEPGEN_MSG_WATCHDOG_SETUP,
     STEPGEN_MSG_CNT
 };
 

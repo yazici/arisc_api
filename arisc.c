@@ -338,6 +338,22 @@ void stepgen_pos_set(uint8_t c, int32_t pos)
     msg_send(STEPGEN_MSG_POS_SET, msg_buf, 2*4, 0);
 }
 
+/**
+ * @brief   enable/disable `abort all` watchdog
+ * @param   enable      0 = disable watchdog, other values - enable watchdog
+ * @param   time        watchdog wait time (in nanoseconds)
+ * @retval  none
+ */
+void stepgen_watchdog_setup(uint8_t enable, uint32_t time)
+{
+    u32_10_t *tx = (u32_10_t*) msg_buf;
+
+    tx->v[0] = enable;
+    tx->v[1] = time;
+
+    msg_send(STEPGEN_MSG_WATCHDOG_SETUP, msg_buf, 2*4, 0);
+}
+
 
 
 
@@ -820,6 +836,7 @@ int32_t parse_and_exec(const char *str)
          stepgen_abort          (channel, all) \n\
     int  stepgen_pos_get        (channel) \n\
          stepgen_pos_set        (channel, position) \n\
+         stepgen_watchdog_setup (enable, time) \n\
 \n\
          encoder_pin_setup      (channel, phase, port, pin) \n\
          encoder_setup          (channel, using_B, using_Z) \n\
@@ -840,8 +857,10 @@ int32_t parse_and_exec(const char *str)
     pulses          number of pin pulses (0..4294967295)\n\
     low_time        pin state setup time in nanoseconds (0..4294967295)\n\
     high_time       pin state hold time in nanoseconds (0..4294967295)\n\
+    time            watchdog wait time in nanoseconds (0..4294967295)\n\
     all             0 = abort current task, !0 = abort all tasks\n\
     position        position value in pulses (integer 4 bytes)\n\
+    enable          0 = disable watchdog, !0 = enable watchdog\n\
 \n\
     phase           encoder phase (0..2, PH_A, PH_B, PH_Z)\n\
     using_B         use phase B? (0..1)\n\
@@ -885,6 +904,7 @@ int32_t parse_and_exec(const char *str)
     %s \"stepgen_pos_set(0,777)\"           # set channel 0 position to 777 \n\
     %s \"stepgen_pos_get(0)\"               # get channel 0 position \n\
     %s \"stepgen_abort(0,1)\"               # stop channel 0 on LOW pin state\n\
+    %s \"stepgen_watchdog_setup(1,10000)\"  # start watchdog, wait time = 10us\n\
 \n\
   ENCODER examples:\n\
 \n\
@@ -900,7 +920,7 @@ int32_t parse_and_exec(const char *str)
     If you are using stdin/stdout mode, omit `%s` and any \" brackets\n\
 \n",
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
-            app_name, app_name, app_name, app_name, app_name, app_name,
+            app_name, app_name, app_name, app_name, app_name, app_name, app_name,
             app_name, app_name, app_name, app_name, app_name, app_name, app_name,
             app_name
         );
@@ -1039,6 +1059,15 @@ int32_t parse_and_exec(const char *str)
     {
 #if !TEST
         stepgen_pos_set(arg[0], (int32_t)arg[1]);
+#endif
+        printf("OK\n");
+        return 0;
+    }
+
+    if ( !reg_match(str, "stepgen_watchdog_setup *\\("UINT","UINT"\\)", &arg[0], 2) )
+    {
+#if !TEST
+        stepgen_watchdog_setup(arg[0], arg[1]);
 #endif
         printf("OK\n");
         return 0;
